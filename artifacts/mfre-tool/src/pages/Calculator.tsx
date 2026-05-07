@@ -169,6 +169,16 @@ export default function Calculator() {
               </Button>
             </Link>
             <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportAnalysisPdf("Current Analysis", parsedData, results)}
+              className="gap-1.5 text-xs border-slate-600 text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-500"
+              data-testid="button-export-pdf-current"
+            >
+              <FileDown className="w-3.5 h-3.5" />
+              Export PDF
+            </Button>
+            <Button
               size="sm"
               onClick={() => setSaveDialogOpen(true)}
               className={cn(
