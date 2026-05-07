@@ -1,8 +1,9 @@
 import { Link } from "wouter";
 import { useSavedAnalyses, SavedAnalysis } from "@/hooks/use-saved-analyses";
+import { exportFromSavedAnalysis } from "@/lib/export-pdf";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building, ArrowLeft, Trash2, BarChart3 } from "lucide-react";
+import { Building, ArrowLeft, Trash2, BarChart3, FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const fmt$ = (v: number | null | undefined) => {
@@ -188,14 +189,24 @@ export default function Comparison() {
                       <div className="flex flex-col items-center gap-1.5">
                         <span className="font-semibold text-white text-sm leading-tight">{a.name}</span>
                         <span className="text-slate-500 text-xs font-normal">{fmtDate(a.savedAt)}</span>
-                        <button
-                          onClick={() => deleteAnalysis(a.id)}
-                          className="mt-1 text-slate-600 hover:text-red-400 transition-colors"
-                          title="Remove from comparison"
-                          data-testid={`button-delete-${a.id}`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-3 mt-1">
+                          <button
+                            onClick={() => exportFromSavedAnalysis(a)}
+                            className="text-slate-400 hover:text-blue-400 transition-colors"
+                            title="Export PDF"
+                            data-testid={`button-export-pdf-${a.id}`}
+                          >
+                            <FileDown className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => deleteAnalysis(a.id)}
+                            className="text-slate-600 hover:text-red-400 transition-colors"
+                            title="Remove from comparison"
+                            data-testid={`button-delete-${a.id}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </th>
                   ))}

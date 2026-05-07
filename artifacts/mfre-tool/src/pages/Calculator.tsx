@@ -10,10 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Building, DollarSign, Percent, TrendingUp, AlertTriangle, Save, BarChart3 } from "lucide-react";
+import { ChevronDown, Building, DollarSign, Percent, TrendingUp, AlertTriangle, Save, BarChart3, FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Link } from "wouter";
+import { exportAnalysisPdf } from "@/lib/export-pdf";
 
 const formatCurrency = (value: number | null | undefined) => {
   if (value === null || value === undefined || isNaN(value)) return "N/A";
@@ -451,7 +452,15 @@ export default function Calculator() {
                     <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
                     Terminal Output
                   </h2>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => exportAnalysisPdf("Current Analysis", parsedData, results)}
+                      className="text-slate-500 hover:text-slate-200 transition-colors p-1 rounded hover:bg-slate-800"
+                      title="Export PDF"
+                      data-testid="button-export-pdf-current"
+                    >
+                      <FileDown className="w-4 h-4" />
+                    </button>
                     <GradeBadge grade={results.investmentGrade} />
                   </div>
                 </div>
