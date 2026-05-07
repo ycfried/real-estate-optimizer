@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "MFRE Investment Tool"
+version = "1.0.0"
+id = "artifacts/mfre-tool"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22540
+
+[services.development]
+run = "pnpm --filter @workspace/mfre-tool run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/mfre-tool", "run", "build" ]
+publicDir = "artifacts/mfre-tool/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22540"
+BASE_PATH = "/"
