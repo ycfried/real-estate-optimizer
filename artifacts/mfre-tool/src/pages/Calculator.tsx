@@ -145,24 +145,24 @@ export default function Calculator() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans selection:bg-primary/20 selection:text-primary">
-      <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-10 shadow-sm">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center border border-primary/30">
-              <Building className="w-4 h-4 text-primary" />
+            <div className="w-8 h-8 rounded bg-blue-50 flex items-center justify-center border border-blue-200">
+              <Building className="w-4 h-4 text-blue-600" />
             </div>
-            <h1 className="text-lg font-bold text-white tracking-tight">MFRE<span className="text-primary-foreground/60 font-medium">Terminal</span></h1>
+            <h1 className="text-lg font-bold text-slate-900 tracking-tight">MFRE<span className="text-slate-400 font-medium">Terminal</span></h1>
           </div>
           <div className="flex items-center gap-3">
             <div className="text-xs font-mono text-slate-400 hidden sm:flex items-center gap-1">
               LIVE CALCULATION <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse ml-1"></span>
             </div>
             <Link href="/compare" data-testid="link-compare">
-              <Button variant="ghost" size="sm" className="text-slate-300 hover:text-white hover:bg-slate-800 text-xs gap-1.5">
+              <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-xs gap-1.5">
                 <BarChart3 className="w-3.5 h-3.5" />
                 Compare
                 {analyses.length > 0 && (
-                  <span className="bg-primary/20 text-primary border border-primary/30 rounded-full text-[10px] px-1.5 py-0 leading-4 font-mono">
+                  <span className="bg-blue-50 text-blue-600 border border-blue-200 rounded-full text-[10px] px-1.5 py-0 leading-4 font-mono">
                     {analyses.length}
                   </span>
                 )}
@@ -172,7 +172,7 @@ export default function Calculator() {
               variant="outline"
               size="sm"
               onClick={() => exportAnalysisPdf("Current Analysis", parsedData, results)}
-              className="gap-1.5 text-xs border-slate-600 text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-500"
+              className="gap-1.5 text-xs border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               data-testid="button-export-pdf-current"
             >
               <FileDown className="w-3.5 h-3.5" />
@@ -456,18 +456,18 @@ export default function Calculator() {
           <div className="flex-1 lg:max-w-[35%] relative">
             <div className="sticky top-20 flex flex-col gap-6 z-20">
               
-              <Card className="border-slate-800 bg-slate-900 text-slate-100 shadow-xl overflow-hidden ring-1 ring-white/10">
-                <div className="p-5 border-b border-slate-800 bg-slate-950/50 flex justify-between items-center">
-                  <h2 className="text-lg font-semibold tracking-tight text-white flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+              <Card className="border-slate-200 bg-white shadow-sm overflow-hidden">
+                <div className="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                  <h2 className="text-lg font-semibold tracking-tight text-slate-800 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
                     Terminal Output
                   </h2>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => exportAnalysisPdf("Current Analysis", parsedData, results)}
-                      className="text-slate-500 hover:text-slate-200 transition-colors p-1 rounded hover:bg-slate-800"
+                      className="text-slate-400 hover:text-slate-700 transition-colors p-1 rounded hover:bg-slate-200"
                       title="Export PDF"
-                      data-testid="button-export-pdf-current"
+                      data-testid="button-export-pdf-panel"
                     >
                       <FileDown className="w-4 h-4" />
                     </button>
@@ -477,42 +477,42 @@ export default function Calculator() {
                 
                 <CardContent className="p-0">
                   <div className="p-5 space-y-1">
-                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Core Financials</div>
+                    <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Core Financials</div>
                     <MetricRow label="Loan Amount" value={results.loanAmount} testId="result-loan-amount" />
                     <MetricRow label="Annual Debt Service" value={results.annualDebtService} testId="result-debt-service" />
                     <MetricRow label="Effective Gross Income" value={results.egi} testId="result-egi" />
                     <MetricRow label="Total OpEx (Annual)" value={results.totalOperatingExpenses} testId="result-opex" />
-                    <div className="h-px bg-slate-800 my-2"></div>
-                    <MetricRow label="Net Operating Income" value={results.noi} colorClass="text-white text-base" testId="result-noi" />
+                    <div className="h-px bg-slate-100 my-2"></div>
+                    <MetricRow label="Net Operating Income" value={results.noi} colorClass="text-slate-900 text-base font-bold" testId="result-noi" />
                     <MetricRow 
                       label="Cash Flow (Annual)" 
                       value={results.cashFlow} 
-                      colorClass={cn("text-base", results.cashFlow !== null && results.cashFlow >= 0 ? "text-green-400" : "text-red-400")} 
+                      colorClass={cn("text-base font-bold", results.cashFlow !== null && results.cashFlow >= 0 ? "text-green-600" : "text-red-600")} 
                       testId="result-cash-flow" 
                     />
                   </div>
 
-                  <div className="bg-slate-800/50 p-5 border-t border-slate-800/80">
-                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Yield Metrics</div>
+                  <div className="bg-slate-50 p-5 border-t border-slate-100">
+                    <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Yield Metrics</div>
                     <MetricRow 
                       label="Cash-on-Cash Return" 
                       value={results.coc} 
                       format="percent" 
-                      colorClass={cn("text-lg", getCocColor(results.coc))}
+                      colorClass={cn("text-lg font-bold", getCocColor(results.coc))}
                       testId="result-coc" 
                     />
                     <MetricRow 
                       label="Debt Service Coverage Ratio" 
                       value={results.dscr} 
                       format="number" 
-                      colorClass={cn("text-lg", getDscrColor(results.dscr))}
+                      colorClass={cn("text-lg font-bold", getDscrColor(results.dscr))}
                       testId="result-dscr" 
                     />
                     <MetricRow 
                       label="Cap Rate" 
                       value={results.capRate} 
                       format="percent" 
-                      colorClass="text-slate-200"
+                      colorClass="text-slate-700 font-semibold"
                       testId="result-cap-rate" 
                     />
                   </div>
@@ -520,9 +520,9 @@ export default function Calculator() {
               </Card>
 
               {/* Stressed Results */}
-              <Card className="border-amber-900/50 bg-slate-900 text-slate-100 shadow-xl overflow-hidden ring-1 ring-amber-500/20">
-                <div className="p-4 border-b border-amber-900/30 bg-amber-950/20 flex justify-between items-center">
-                  <h2 className="text-md font-semibold tracking-tight text-amber-500 flex items-center gap-2">
+              <Card className="border-amber-200 bg-amber-50 shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-amber-200 bg-amber-100/60 flex justify-between items-center">
+                  <h2 className="text-md font-semibold tracking-tight text-amber-800 flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4" />
                     Stressed Scenario
                   </h2>
@@ -534,22 +534,22 @@ export default function Calculator() {
                   <MetricRow 
                     label="Stressed Cash Flow" 
                     value={results.stressedCashFlow} 
-                    colorClass={cn(results.stressedCashFlow !== null && results.stressedCashFlow >= 0 ? "text-green-400" : "text-red-400")} 
+                    colorClass={cn("font-bold", results.stressedCashFlow !== null && results.stressedCashFlow >= 0 ? "text-green-600" : "text-red-600")} 
                     testId="result-stressed-cash-flow" 
                   />
-                  <div className="h-px bg-slate-800 my-2"></div>
+                  <div className="h-px bg-amber-200 my-2"></div>
                   <MetricRow 
                     label="Stressed DSCR" 
                     value={results.stressedDscr} 
                     format="number" 
-                    colorClass={cn("text-base", getDscrColor(results.stressedDscr, true))}
+                    colorClass={cn("text-base font-bold", getDscrColor(results.stressedDscr, true))}
                     testId="result-stressed-dscr" 
                   />
                   <MetricRow 
                     label="Stressed Cap Rate" 
                     value={results.stressedCapRate} 
                     format="percent" 
-                    colorClass="text-slate-300"
+                    colorClass="text-slate-700"
                     testId="result-stressed-cap-rate" 
                   />
                 </CardContent>
