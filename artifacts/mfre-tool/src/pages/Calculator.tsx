@@ -1,15 +1,19 @@
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { InvestmentData, defaultInvestmentData, useInvestmentCalculations } from "@/hooks/use-investment-calculations";
+import { useSavedAnalyses } from "@/hooks/use-saved-analyses";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Building, DollarSign, Percent, TrendingUp, AlertTriangle } from "lucide-react";
+import { ChevronDown, Building, DollarSign, Percent, TrendingUp, AlertTriangle, Save, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { Link } from "wouter";
 
 const formatCurrency = (value: number | null | undefined) => {
   if (value === null || value === undefined || isNaN(value)) return "N/A";
@@ -78,6 +82,18 @@ export default function Calculator() {
 
   const results = useInvestmentCalculations(parsedData);
   const [gradingOpen, setGradingOpen] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [propertyName, setPropertyName] = useState("");
+  const [savedFlash, setSavedFlash] = useState(false);
+  const { saveAnalysis, analyses } = useSavedAnalyses();
+
+  const handleSave = () => {
+    saveAnalysis(propertyName, parsedData, results);
+    setPropertyName("");
+    setSaveDialogOpen(false);
+    setSavedFlash(true);
+    setTimeout(() => setSavedFlash(false), 2000);
+  };
 
   const GradeBadge = ({ grade }: { grade: string }) => {
     let colorClass = "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700";
@@ -136,11 +152,66 @@ export default function Calculator() {
             </div>
             <h1 className="text-lg font-bold text-white tracking-tight">MFRE<span className="text-primary-foreground/60 font-medium">Terminal</span></h1>
           </div>
-          <div className="text-xs font-mono text-slate-400">
-            LIVE CALCULATION <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse ml-1"></span>
+          <div className="flex items-center gap-3">
+            <div className="text-xs font-mono text-slate-400 hidden sm:flex items-center gap-1">
+              LIVE CALCULATION <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse ml-1"></span>
+            </div>
+            <Link href="/compare" data-testid="link-compare">
+              <Button variant="ghost" size="sm" className="text-slate-300 hover:text-white hover:bg-slate-800 text-xs gap-1.5">
+                <BarChart3 className="w-3.5 h-3.5" />
+                Compare
+                {analyses.length > 0 && (
+                  <span className="bg-primary/20 text-primary border border-primary/30 rounded-full text-[10px] px-1.5 py-0 leading-4 font-mono">
+                    {analyses.length}
+                  </span>
+                )}
+              </Button>
+            </Link>
+            <Button
+              size="sm"
+              onClick={() => setSaveDialogOpen(true)}
+              className={cn(
+                "gap-1.5 text-xs transition-all duration-300",
+                savedFlash ? "bg-green-600 hover:bg-green-600" : ""
+              )}
+              data-testid="button-save-analysis"
+            >
+              <Save className="w-3.5 h-3.5" />
+              {savedFlash ? "Saved!" : "Save Analysis"}
+            </Button>
           </div>
         </div>
       </header>
+
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent className="sm:max-w-sm" data-testid="dialog-save">
+          <DialogHeader>
+            <DialogTitle>Save Analysis</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <Label htmlFor="property-name" className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-2">
+              Property Name
+            </Label>
+            <Input
+              id="property-name"
+              placeholder="e.g. 123 Main St, 4-plex"
+              value={propertyName}
+              onChange={e => setPropertyName(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleSave()}
+              autoFocus
+              data-testid="input-property-name"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveDialogOpen(false)} data-testid="button-cancel-save">
+              Cancel
+            </Button>
+            <Button onClick={handleSave} data-testid="button-confirm-save">
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex flex-col lg:flex-row gap-6">

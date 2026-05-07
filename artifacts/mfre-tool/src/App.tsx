@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Calculator from "@/pages/Calculator";
+import Comparison from "@/pages/Comparison";
 
 const queryClient = new QueryClient();
 
@@ -11,6 +12,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Calculator} />
+      <Route path="/compare" component={Comparison} />
       <Route component={NotFound} />
     </Switch>
   );

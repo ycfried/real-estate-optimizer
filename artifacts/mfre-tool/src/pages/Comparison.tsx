@@ -1,0 +1,255 @@
+import { Link } from "wouter";
+import { useSavedAnalyses, SavedAnalysis } from "@/hooks/use-saved-analyses";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Building, ArrowLeft, Trash2, BarChart3 } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const fmt$ = (v: number | null | undefined) => {
+  if (v === null || v === undefined || isNaN(v)) return "N/A";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v);
+};
+
+const fmtPct = (v: number | null | undefined) => {
+  if (v === null || v === undefined || isNaN(v)) return "N/A";
+  return new Intl.NumberFormat("en-US", { style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v / 100);
+};
+
+const fmtNum = (v: number | null | undefined) => {
+  if (v === null || v === undefined || isNaN(v)) return "N/A";
+  return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
+};
+
+const fmtDate = (ts: number) =>
+  new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+function GradeBadge({ grade }: { grade: string }) {
+  let cls = "bg-gray-100 text-gray-700 border-gray-200";
+  if (grade === "Excellent") cls = "bg-green-100 text-green-800 border-green-200";
+  if (grade === "Good") cls = "bg-yellow-100 text-yellow-800 border-yellow-200";
+  if (grade === "Poor") cls = "bg-red-100 text-red-800 border-red-200";
+  return (
+    <Badge variant="outline" className={cn("px-2 py-0.5 text-xs font-semibold uppercase tracking-wider", cls)}>
+      {grade}
+    </Badge>
+  );
+}
+
+type MetricDef = {
+  label: string;
+  group?: string;
+  render: (a: SavedAnalysis) => React.ReactNode;
+  highlight?: (a: SavedAnalysis) => "green" | "red" | "yellow" | "neutral";
+};
+
+const METRICS: MetricDef[] = [
+  { group: "Property", label: "Purchase Price", render: a => fmt$(a.data.purchasePrice) },
+  { label: "Down Payment", render: a => `${a.data.downPaymentPercent}%` },
+  { label: "Interest Rate", render: a => `${a.data.interestRate}%` },
+  { label: "Loan Term", render: a => `${a.data.loanTerm} yrs` },
+  { group: "Financing", label: "Loan Amount", render: a => fmt$(a.results.loanAmount) },
+  { label: "Annual Debt Service", render: a => fmt$(a.results.annualDebtService) },
+  { group: "Income", label: "Gross Annual Income", render: a => fmt$(a.results.totalAnnualIncome) },
+  { label: "Effective Gross Income", render: a => fmt$(a.results.egi) },
+  { group: "Expenses", label: "Total OpEx (Annual)", render: a => fmt$(a.results.totalOperatingExpenses) },
+  { group: "Returns", label: "NOI", render: a => fmt$(a.results.noi) },
+  {
+    label: "Cash Flow",
+    render: a => fmt$(a.results.cashFlow),
+    highlight: a => a.results.cashFlow >= 0 ? "green" : "red",
+  },
+  {
+    label: "Cash-on-Cash Return",
+    render: a => fmtPct(a.results.coc),
+    highlight: a => {
+      const v = a.results.coc;
+      if (v === null) return "neutral";
+      if (v >= a.data.excellentCoc) return "green";
+      if (v < a.data.minCoc) return "red";
+      return "yellow";
+    },
+  },
+  {
+    label: "DSCR",
+    render: a => fmtNum(a.results.dscr),
+    highlight: a => {
+      const v = a.results.dscr;
+      if (v === null) return "neutral";
+      if (v >= a.data.excellentDscr) return "green";
+      if (v < a.data.minDscr) return "red";
+      return "yellow";
+    },
+  },
+  { label: "Cap Rate", render: a => fmtPct(a.results.capRate) },
+  { label: "Investment Grade", render: a => <GradeBadge grade={a.results.investmentGrade} /> },
+  { group: "Stressed", label: "Stressed NOI", render: a => fmt$(a.results.stressedNoi) },
+  {
+    label: "Stressed Cash Flow",
+    render: a => fmt$(a.results.stressedCashFlow),
+    highlight: a => a.results.stressedCashFlow >= 0 ? "green" : "red",
+  },
+  {
+    label: "Stressed DSCR",
+    render: a => fmtNum(a.results.stressedDscr),
+    highlight: a => {
+      const v = a.results.stressedDscr;
+      if (v === null) return "neutral";
+      if (v >= a.data.excellentStressDscr) return "green";
+      if (v < a.data.minStressDscr) return "red";
+      return "yellow";
+    },
+  },
+  { label: "Stressed Cap Rate", render: a => fmtPct(a.results.stressedCapRate) },
+  { label: "Stress Grade", render: a => <GradeBadge grade={a.results.stressGrade} /> },
+];
+
+const highlightClass = {
+  green: "text-green-600 font-semibold",
+  red: "text-red-600 font-semibold",
+  yellow: "text-yellow-600 font-semibold",
+  neutral: "text-slate-800",
+};
+
+export default function Comparison() {
+  const { analyses, deleteAnalysis, clearAll } = useSavedAnalyses();
+
+  const groupStarts = new Set<number>();
+  let lastGroup: string | undefined = undefined;
+  METRICS.forEach((m, i) => {
+    if (m.group && m.group !== lastGroup) {
+      groupStarts.add(i);
+      lastGroup = m.group;
+    }
+  });
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans">
+      <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/" data-testid="link-back-to-calculator">
+              <div className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors cursor-pointer">
+                <ArrowLeft className="w-4 h-4" />
+                <span className="text-sm">Calculator</span>
+              </div>
+            </Link>
+            <div className="w-px h-4 bg-slate-700" />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center border border-primary/30">
+                <Building className="w-4 h-4 text-primary" />
+              </div>
+              <h1 className="text-lg font-bold text-white tracking-tight">
+                MFRE<span className="text-primary-foreground/60 font-medium">Terminal</span>
+              </h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-mono text-slate-400 flex items-center gap-1.5">
+              <BarChart3 className="w-3.5 h-3.5" />
+              COMPARISON VIEW
+            </span>
+            {analyses.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearAll}
+                className="text-slate-400 hover:text-red-400 hover:bg-red-900/20 text-xs"
+                data-testid="button-clear-all"
+              >
+                Clear All
+              </Button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {analyses.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-32 text-center">
+            <BarChart3 className="w-12 h-12 text-slate-300 mb-4" />
+            <h2 className="text-xl font-semibold text-slate-700 mb-2">No saved analyses yet</h2>
+            <p className="text-slate-500 text-sm mb-6 max-w-sm">
+              Go back to the calculator, fill in a property, and click "Save Analysis" to start comparing.
+            </p>
+            <Link href="/">
+              <Button data-testid="button-go-to-calculator">Go to Calculator</Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+            <table className="w-full text-sm border-collapse" data-testid="comparison-table">
+              <thead>
+                <tr className="bg-slate-900 text-white">
+                  <th className="px-5 py-4 text-left font-semibold text-slate-400 text-xs uppercase tracking-wider w-48 sticky left-0 bg-slate-900 z-10">
+                    Metric
+                  </th>
+                  {analyses.map(a => (
+                    <th key={a.id} className="px-5 py-4 text-center min-w-[180px]" data-testid={`col-${a.id}`}>
+                      <div className="flex flex-col items-center gap-1.5">
+                        <span className="font-semibold text-white text-sm leading-tight">{a.name}</span>
+                        <span className="text-slate-500 text-xs font-normal">{fmtDate(a.savedAt)}</span>
+                        <button
+                          onClick={() => deleteAnalysis(a.id)}
+                          className="mt-1 text-slate-600 hover:text-red-400 transition-colors"
+                          title="Remove from comparison"
+                          data-testid={`button-delete-${a.id}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {METRICS.map((metric, i) => {
+                  const isGroupStart = groupStarts.has(i);
+                  return (
+                    <>
+                      {isGroupStart && (
+                        <tr key={`group-${metric.group}`} className="bg-slate-100">
+                          <td
+                            colSpan={analyses.length + 1}
+                            className="px-5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider sticky left-0 bg-slate-100"
+                          >
+                            {metric.group}
+                          </td>
+                        </tr>
+                      )}
+                      <tr
+                        key={metric.label}
+                        className={cn(
+                          "border-t border-slate-100 hover:bg-slate-50 transition-colors",
+                          i % 2 === 0 ? "bg-white" : "bg-slate-50/50"
+                        )}
+                      >
+                        <td className="px-5 py-3 text-slate-600 font-medium sticky left-0 bg-inherit z-10 whitespace-nowrap">
+                          {metric.label}
+                        </td>
+                        {analyses.map(a => {
+                          const hue = metric.highlight ? metric.highlight(a) : "neutral";
+                          return (
+                            <td
+                              key={a.id}
+                              className={cn(
+                                "px-5 py-3 text-center",
+                                highlightClass[hue]
+                              )}
+                              data-testid={`cell-${metric.label.replace(/\s+/g, "-").toLowerCase()}-${a.id}`}
+                            >
+                              {metric.render(a)}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    </>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
