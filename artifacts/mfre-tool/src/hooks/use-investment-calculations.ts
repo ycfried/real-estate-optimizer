@@ -144,11 +144,18 @@ export function useInvestmentCalculations(data: InvestmentData) {
       else stressGrade = "Poor";
     }
 
+    // Breakeven occupancy: the % of gross potential income needed to cover
+    // all operating expenses + debt service.
+    const breakEvenOccupancy =
+      totalAnnualIncome > 0
+        ? ((totalOperatingExpenses + annualDebtService) / totalAnnualIncome) * 100
+        : null;
+
     return {
       loanAmount, annualDebtService, egi, totalOperatingExpenses, noi,
       cashFlow, coc, dscr, capRate,
       stressedNoi, stressedCashFlow, stressedDscr, stressedCapRate,
-      investmentGrade, stressGrade, totalAnnualIncome,
+      investmentGrade, stressGrade, totalAnnualIncome, breakEvenOccupancy,
     };
   }, [data]);
 }

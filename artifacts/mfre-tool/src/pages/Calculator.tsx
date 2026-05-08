@@ -614,6 +614,31 @@ export default function Calculator() {
                       colorClass={cn("text-lg font-bold", getDscrColor(results.dscr))} testId="result-dscr" />
                     <MetricRow label="Cap Rate" value={results.capRate} format="percent"
                       colorClass="text-slate-700 font-semibold" testId="result-cap-rate" />
+                    <div className="h-px bg-slate-200 my-2" />
+                    <div className="flex justify-between items-start py-1.5">
+                      <div>
+                        <span className="text-sm font-medium text-slate-500 block">Breakeven Occupancy</span>
+                        <span className="text-[11px] text-slate-400 leading-tight">min. fill rate to cover OpEx + debt</span>
+                      </div>
+                      <div className="text-right">
+                        <span
+                          className={cn(
+                            "text-sm font-bold tabular-nums tracking-tight",
+                            results.breakEvenOccupancy === null ? "text-slate-400" :
+                            results.breakEvenOccupancy > 100 ? "text-red-600" :
+                            results.breakEvenOccupancy > 90 ? "text-red-500" :
+                            results.breakEvenOccupancy > 80 ? "text-yellow-600" :
+                            "text-green-600"
+                          )}
+                          style={{ fontVariantNumeric: "tabular-nums" }}
+                          data-testid="result-breakeven-occupancy"
+                        >
+                          {results.breakEvenOccupancy === null ? "N/A" :
+                           results.breakEvenOccupancy > 100 ? ">100% (impossible)" :
+                           `${results.breakEvenOccupancy.toFixed(1)}%`}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
