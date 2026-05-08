@@ -194,7 +194,7 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     doc.setFontSize(7.5);
     doc.setTextColor(...C.muted);
     doc.text(label.toUpperCase(), ML + 4, y + 5.3);
-    y += 11;
+    y += 15; // 8mm header + 7mm breathing room before first row
   };
 
   // ── Metric row helper ─────────────────────────────────────────────────────────
@@ -296,29 +296,32 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
   y += 3;
 
   // ── SECTION 4: Stressed Scenario ─────────────────────────────────────────────
-  // Header with amber tint
+  // Taller header: title on line 1, params on line 2
+  const stressHeaderH = 16;
   doc.setFillColor(...C.amberLight);
-  doc.rect(ML, y, CW, 8, "F");
+  doc.rect(ML, y, CW, stressHeaderH, "F");
   doc.setDrawColor(...C.amberBorder);
   doc.setLineWidth(0.25);
   doc.line(ML, y, ML + CW, y);
-  doc.line(ML, y + 8, ML + CW, y + 8);
+  doc.line(ML, y + stressHeaderH, ML + CW, y + stressHeaderH);
+  // Title
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(...C.amber);
-  doc.text("STRESSED SCENARIO", ML + 4, y + 5.3);
+  doc.text("STRESSED SCENARIO", ML + 4, y + 6);
+  // Params centered on second line
   const stressParams = [
     `+${data.extraVacancyPercent}% vacancy`,
-    `−${data.rentReductionPercent}% rent`,
+    `-${data.rentReductionPercent}% rent`,
     `+${data.insuranceIncreasePercent}% insurance`,
     `+${data.taxIncreasePercent}% taxes`,
     `+${data.maintenanceIncreasePercent}% maintenance`,
-  ].join("   •   ");
+  ].join("   /   ");
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(6);
+  doc.setFontSize(6.5);
   doc.setTextColor(...C.muted);
-  doc.text(stressParams, ML + CW - 4, y + 5.3, { align: "right" });
-  y += 11;
+  doc.text(stressParams, ML + CW / 2, y + 12.5, { align: "center" });
+  y += stressHeaderH + 7; // header height + breathing room
 
   metricRow("Stressed NOI", fmt$(results.stressedNoi));
   metricRow("Stressed Cash Flow", fmt$(results.stressedCashFlow), cashFlowColor(results.stressedCashFlow), true, C.bgLight);
@@ -444,11 +447,27 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
   // ── Grading Thresholds ────────────────────────────────────────────────────────
   sectionHeader("Grading Thresholds");
 
-  const thresholdRows: [string, string, string][] = [
-    ["Cash-on-Cash Return",       `≥ ${data.excellentCoc}%`,    `${data.minCoc}% – ${data.excellentCoc}%`],
-    ["Debt Service Coverage Ratio", `≥ ${data.excellentDscr}`,  `${data.minDscr} – ${data.excellentDscr}`],
-    ["Stressed DSCR",             `≥ ${data.excellentStressDscr}`, `${data.minStressDscr} – ${data.excellentStressDscr}`],
+  // Use ASCII-only text — jsPDF's built-in Helvetica can't render >= or em-dash Unicode
+  const thresholdRows: [string, string, string, string][] = [
+    ["Cash-on-Cash Return",
+      `>= ${data.excellentCoc}%`,
+      `${data.minCoc}% to ${data.excellentCoc}%`,
+      `< ${data.minCoc}%`],
+    ["Debt Service Coverage Ratio",
+      `>= ${data.excellentDscr}`,
+      `${data.minDscr} to ${data.excellentDscr}`,
+      `< ${data.minDscr}`],
+    ["Stressed DSCR",
+      `>= ${data.excellentStressDscr}`,
+      `${data.minStressDscr} to ${data.excellentStressDscr}`,
+      `< ${data.minStressDscr}`],
   ];
+
+  // Column x positions
+  const colMetric  = ML + 4;
+  const colExc     = ML + CW * 0.42;
+  const colGood    = ML + CW * 0.62;
+  const colPoor    = ML + CW - 4;
 
   // Table header
   doc.setFillColor(...C.bgMid);
@@ -456,13 +475,13 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
   doc.setTextColor(...C.muted);
-  doc.text("METRIC", ML + 4, y + 3.5);
-  doc.text("EXCELLENT", ML + CW * 0.55, y + 3.5);
-  doc.text("GOOD (RANGE)", ML + CW * 0.78, y + 3.5);
-  doc.text("POOR", ML + CW - 4, y + 3.5, { align: "right" });
+  doc.text("METRIC", colMetric, y + 3.5);
+  doc.text("EXCELLENT", colExc, y + 3.5);
+  doc.text("GOOD (RANGE)", colGood, y + 3.5);
+  doc.text("POOR", colPoor, y + 3.5, { align: "right" });
   y += 8;
 
-  thresholdRows.forEach(([metric, excellent, good], i) => {
+  thresholdRows.forEach(([metric, excellent, good, poor], i) => {
     const rowBg = i % 2 === 0 ? C.white : C.bgLight;
     doc.setFillColor(...rowBg);
     doc.rect(ML, y - 1, CW, 7, "F");
@@ -470,18 +489,17 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(...C.textMid);
-    doc.text(metric, ML + 4, y + 3.5);
+    doc.text(metric, colMetric, y + 3.5);
 
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...C.green);
-    doc.text(excellent, ML + CW * 0.55, y + 3.5);
+    doc.text(excellent, colExc, y + 3.5);
 
     doc.setTextColor(...C.yellow);
-    doc.text(good, ML + CW * 0.78, y + 3.5);
+    doc.text(good, colGood, y + 3.5);
 
     doc.setTextColor(...C.red);
-    const poorLabel = metric.includes("DSCR") ? `< ${thresholdRows[i][2].split(" – ")[0]}` : `< ${thresholdRows[i][2].split("% – ")[0]}%`;
-    doc.text(poorLabel, ML + CW - 4, y + 3.5, { align: "right" });
+    doc.text(poor, colPoor, y + 3.5, { align: "right" });
 
     doc.setDrawColor(...C.borderLight);
     doc.setLineWidth(0.2);
