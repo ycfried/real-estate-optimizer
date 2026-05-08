@@ -127,6 +127,41 @@ function drawPageFooter(doc: jsPDF, PW: number, PH: number, ML: number, MR: numb
   doc.text(`Page ${page} of ${total}`, PW - MR, PH - 6, { align: "right" });
 }
 
+// ── Amortization milestone calculator ────────────────────────────────────────
+interface AmortMilestone {
+  year: number;
+  cumPrincipal: number;
+  cumInterest: number;
+  balance: number;
+  equityPct: number;
+}
+
+function buildAmortizationMilestones(
+  loanAmount: number,
+  annualRate: number,
+  termYears: number
+): AmortMilestone[] {
+  const r = annualRate / 100 / 12;
+  const n = termYears * 12;
+  const M = r === 0
+    ? loanAmount / n
+    : loanAmount * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+
+  const rawYears = [5, 10, 15, 20, termYears];
+  const milestoneYears = [...new Set(rawYears)].filter(y => y <= termYears);
+
+  return milestoneYears.map(year => {
+    const k = Math.min(year * 12, n);
+    const balance = r === 0
+      ? Math.max(0, loanAmount - M * k)
+      : loanAmount * (Math.pow(1 + r, n) - Math.pow(1 + r, k)) / (Math.pow(1 + r, n) - 1);
+    const cumPrincipal = loanAmount - balance;
+    const cumInterest = M * k - cumPrincipal;
+    const equityPct = loanAmount > 0 ? (cumPrincipal / loanAmount) * 100 : 0;
+    return { year, cumPrincipal, cumInterest, balance: Math.max(0, balance), equityPct };
+  });
+}
+
 export function exportAnalysisPdf(name: string, data: InvestmentData, results: SavedAnalysisResults, savedAt?: number) {
   const doc = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
 
@@ -332,7 +367,7 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
   );
   y += 2;
 
-  drawPageFooter(doc, PW, PH, ML, MR, 1, 2);
+  drawPageFooter(doc, PW, PH, ML, MR, 1, 3);
 
   // ── PAGE 2 ───────────────────────────────────────────────────────────────────
   doc.addPage();
@@ -517,7 +552,189 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     ML, y, { maxWidth: CW }
   );
 
-  drawPageFooter(doc, PW, PH, ML, MR, 2, 2);
+  drawPageFooter(doc, PW, PH, ML, MR, 2, 3);
+
+  // ── PAGE 3: Amortization Summary ─────────────────────────────────────────────
+  doc.addPage();
+  y = drawPageHeader(doc, PW, ML, MR, true);
+  y += 6;
+
+  // Section header
+  doc.setFillColor(...C.bgMid);
+  doc.rect(ML, y, CW, 8, "F");
+  doc.setDrawColor(...C.border);
+  doc.setLineWidth(0.25);
+  doc.line(ML, y, ML + CW, y);
+  doc.line(ML, y + 8, ML + CW, y + 8);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...C.muted);
+  doc.text("LOAN AMORTIZATION SUMMARY", ML + 4, y + 5.3);
+  // sub-label right-aligned
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.5);
+  doc.text(
+    `${fmt$(results.loanAmount)} loan  /  ${data.interestRate}%  /  ${data.loanTerm}-yr`,
+    ML + CW - 4, y + 5.3, { align: "right" }
+  );
+  y += 15;
+
+  // Intro note
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...C.muted);
+  doc.text(
+    "Cumulative totals show how much principal and interest you have paid by the end of each milestone year.",
+    ML, y, { maxWidth: CW }
+  );
+  y += 10;
+
+  // Build milestones
+  const amortMilestones = buildAmortizationMilestones(
+    results.loanAmount,
+    data.interestRate,
+    data.loanTerm
+  );
+
+  // Monthly payment for display
+  const r = data.interestRate / 100 / 12;
+  const n = data.loanTerm * 12;
+  const monthlyPayment = r === 0
+    ? results.loanAmount / n
+    : results.loanAmount * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+
+  // Summary pill: monthly payment
+  doc.setFillColor(...C.blueLight);
+  doc.roundedRect(ML, y, CW, 14, 2, 2, "F");
+  doc.setDrawColor(...C.blue);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(ML, y, CW, 14, 2, 2, "S");
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(...C.muted);
+  doc.text("MONTHLY PAYMENT (P+I)", ML + CW / 2, y + 4.5, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(...C.blueMid);
+  doc.text(fmt$(monthlyPayment), ML + CW / 2, y + 11.5, { align: "center" });
+  y += 20;
+
+  // Table columns: Year | Cum. Principal | Cum. Interest | Remaining Balance | % Loan Paid
+  const aCol = {
+    year:      ML + 4,
+    principal: ML + CW * 0.25,
+    interest:  ML + CW * 0.47,
+    balance:   ML + CW * 0.69,
+    pct:       ML + CW - 4,
+  };
+
+  // Table header
+  doc.setFillColor(...C.bgMid);
+  doc.rect(ML, y - 1, CW, 7, "F");
+  doc.setDrawColor(...C.border);
+  doc.setLineWidth(0.25);
+  doc.line(ML, y - 1, ML + CW, y - 1);
+  doc.line(ML, y + 6, ML + CW, y + 6);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.5);
+  doc.setTextColor(...C.muted);
+  doc.text("YEAR", aCol.year, y + 3.5);
+  doc.text("CUM. PRINCIPAL", aCol.principal, y + 3.5);
+  doc.text("CUM. INTEREST", aCol.interest, y + 3.5);
+  doc.text("REMAINING BALANCE", aCol.balance, y + 3.5);
+  doc.text("% LOAN PAID", aCol.pct, y + 3.5, { align: "right" });
+  y += 9;
+
+  amortMilestones.forEach(({ year, cumPrincipal, cumInterest, balance, equityPct }, i) => {
+    const isLast = year === data.loanTerm;
+    const rowBg = isLast ? C.bgMid : (i % 2 === 0 ? C.white : C.bgLight);
+    doc.setFillColor(...rowBg);
+    doc.rect(ML, y - 1, CW, 8, "F");
+
+    // Year badge
+    doc.setFont("helvetica", isLast ? "bold" : "normal");
+    doc.setFontSize(8.5);
+    if (isLast) doc.setTextColor(...C.blue); else doc.setTextColor(...C.textMid);
+    doc.text(`Year ${year}`, aCol.year, y + 4);
+
+    // Cumulative principal (green tone)
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...C.green);
+    doc.text(fmt$(cumPrincipal), aCol.principal, y + 4);
+
+    // Cumulative interest (amber/red)
+    doc.setTextColor(...C.yellow);
+    doc.text(fmt$(cumInterest), aCol.interest, y + 4);
+
+    // Remaining balance
+    if (isLast) doc.setTextColor(...C.green); else doc.setTextColor(...C.textMid);
+    doc.text(isLast ? "$0" : fmt$(balance), aCol.balance, y + 4);
+
+    // % paid — right-aligned, bar width scaled to equityPct
+    const barMaxW = 22;
+    const barW = (equityPct / 100) * barMaxW;
+    const barX = aCol.pct - barMaxW - 2;
+    doc.setFillColor(...C.bgMid);
+    doc.rect(barX, y + 1.5, barMaxW, 3, "F");
+    doc.setFillColor(...C.blue);
+    doc.rect(barX, y + 1.5, barW, 3, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...C.blueMid);
+    doc.text(`${equityPct.toFixed(1)}%`, aCol.pct, y + 4, { align: "right" });
+
+    doc.setDrawColor(...C.borderLight);
+    doc.setLineWidth(0.2);
+    doc.line(ML, y + 7, ML + CW, y + 7);
+    y += 8;
+  });
+
+  y += 10;
+
+  // Total interest cost callout
+  const totalInterest = amortMilestones[amortMilestones.length - 1]?.cumInterest ?? 0;
+  const totalCost = results.loanAmount + totalInterest;
+  doc.setFillColor(...C.bgLight);
+  doc.roundedRect(ML, y, CW, 20, 2, 2, "F");
+  doc.setDrawColor(...C.border);
+  doc.setLineWidth(0.25);
+  doc.roundedRect(ML, y, CW, 20, 2, 2, "S");
+
+  const thirdW = CW / 3;
+  const callouts: [string, string, [number, number, number]][] = [
+    ["LOAN AMOUNT", fmt$(results.loanAmount), C.textMid],
+    ["TOTAL INTEREST PAID", fmt$(totalInterest), C.yellow],
+    ["TOTAL COST OF LOAN", fmt$(totalCost), C.text],
+  ];
+  callouts.forEach(([label, value, color], i) => {
+    const cx = ML + thirdW * i + thirdW / 2;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...C.muted);
+    doc.text(label, cx, y + 6, { align: "center" });
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(...color);
+    doc.text(value, cx, y + 14.5, { align: "center" });
+    if (i < 2) {
+      doc.setDrawColor(...C.border);
+      doc.setLineWidth(0.25);
+      doc.line(ML + thirdW * (i + 1), y + 2, ML + thirdW * (i + 1), y + 18);
+    }
+  });
+  y += 24;
+
+  // Disclaimer note
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(...C.mutedLight);
+  doc.text(
+    "Amortization figures are based on a standard fixed-rate mortgage with no extra payments. Actual totals may vary.",
+    ML, y, { maxWidth: CW }
+  );
+
+  drawPageFooter(doc, PW, PH, ML, MR, 3, 3);
 
   const safeName = name.replace(/[^a-z0-9]/gi, "_").toLowerCase();
   doc.save(`mfre_${safeName}_analysis.pdf`);
