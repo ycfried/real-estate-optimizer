@@ -275,9 +275,6 @@ export default function Calculator() {
             <h1 className="text-lg font-bold text-slate-900 tracking-tight">MFRE<span className="text-slate-400 font-medium">Terminal</span></h1>
           </div>
           <div className="flex items-center gap-3">
-            <div className="text-xs font-mono text-slate-400 hidden sm:flex items-center gap-1">
-              LIVE CALCULATION <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse ml-1" />
-            </div>
             <Link href="/compare" data-testid="link-compare">
               <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-xs gap-1.5">
                 <BarChart3 className="w-3.5 h-3.5" />
