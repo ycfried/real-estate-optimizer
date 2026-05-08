@@ -1,18 +1,20 @@
 import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { useState, useRef, useCallback } from "react";
 import { InvestmentData, defaultInvestmentData, useInvestmentCalculations } from "@/hooks/use-investment-calculations";
 import { useSavedAnalyses } from "@/hooks/use-saved-analyses";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Building, DollarSign, Percent, TrendingUp, AlertTriangle, Save, BarChart3, FileDown } from "lucide-react";
+import {
+  ChevronDown, Building, DollarSign, Percent, TrendingUp, AlertTriangle,
+  Save, BarChart3, FileDown, Plus, Copy, Trash2, Pencil, Check
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 import { Link } from "wouter";
 import { exportAnalysisPdf } from "@/lib/export-pdf";
 
@@ -20,16 +22,139 @@ const formatCurrency = (value: number | null | undefined) => {
   if (value === null || value === undefined || isNaN(value)) return "N/A";
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
 };
-
 const formatPercent = (value: number | null | undefined) => {
   if (value === null || value === undefined || isNaN(value)) return "N/A";
   return new Intl.NumberFormat("en-US", { style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value / 100);
 };
-
 const formatNumber = (value: number | null | undefined) => {
   if (value === null || value === undefined || isNaN(value)) return "N/A";
   return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 };
+const fmtComma = (v: number) =>
+  new Intl.NumberFormat("en-US").format(v);
+
+// ─── Currency input: formatted display when blurred, raw number when focused ─
+function CurrencyField({
+  value, onChange, step = 1, testId, className, placeholder
+}: {
+  value: number | string;
+  onChange: (v: number) => void;
+  step?: number;
+  testId?: string;
+  className?: string;
+  placeholder?: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const numVal = parseFloat(value as string) || 0;
+
+  const handleFocus = () => {
+    setFocused(true);
+    setTimeout(() => inputRef.current?.select(), 0);
+  };
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    setFocused(false);
+    onChange(parseFloat(e.target.value) || 0);
+  };
+
+  return (
+    <div className="relative">
+      {focused ? (
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none select-none">$</span>
+          <input
+            ref={inputRef}
+            type="number"
+            step={step}
+            defaultValue={numVal}
+            onBlur={handleBlur}
+            data-testid={testId}
+            placeholder={placeholder}
+            autoFocus
+            className={cn(
+              "pl-6 h-10 w-full rounded-md border border-blue-400 bg-white px-3 py-2 text-sm font-mono ring-2 ring-blue-200 outline-none",
+              className
+            )}
+          />
+        </div>
+      ) : (
+        <input
+          type="text"
+          readOnly
+          value={numVal > 0 ? `$${fmtComma(numVal)}` : ""}
+          onFocus={handleFocus}
+          data-testid={testId}
+          placeholder={placeholder || "$0"}
+          className={cn(
+            "h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-mono cursor-text",
+            className
+          )}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Occupied pill toggle ────────────────────────────────────────────────────
+function OccupiedToggle({ checked, onChange, testId }: { checked: boolean; onChange: (v: boolean) => void; testId?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      data-testid={testId}
+      className={cn(
+        "relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+        checked ? "bg-emerald-500" : "bg-slate-200"
+      )}
+    >
+      <span
+        className={cn(
+          "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200",
+          checked ? "translate-x-4" : "translate-x-0"
+        )}
+      />
+    </button>
+  );
+}
+
+// ─── Inline editable label ───────────────────────────────────────────────────
+function InlineLabel({ value, onChange, className }: { value: string; onChange: (v: string) => void; className?: string }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const commit = () => {
+    setEditing(false);
+    onChange(draft.trim() || value);
+  };
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1">
+        <input
+          ref={inputRef}
+          autoFocus
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setDraft(value); setEditing(false); } }}
+          className="h-7 w-28 rounded border border-blue-400 bg-white px-2 text-sm font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
+        />
+        <button type="button" onClick={commit} className="text-emerald-500 hover:text-emerald-600"><Check className="w-3.5 h-3.5" /></button>
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => { setDraft(value); setEditing(true); }}
+      className={cn("flex items-center gap-1 text-sm font-medium text-slate-700 hover:text-blue-600 group", className)}
+    >
+      {value}
+      <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+    </button>
+  );
+}
 
 export default function Calculator() {
   const form = useForm<InvestmentData>({
@@ -37,15 +162,13 @@ export default function Calculator() {
     mode: "onChange"
   });
 
-  const { control, watch, register } = form;
-  const { fields: unitFields } = useFieldArray({
-    control,
-    name: "units"
-  });
+  const { control, watch, register, setValue } = form;
+
+  const { fields: unitFields, append: appendUnit, remove: removeUnit, insert: insertUnit } = useFieldArray({ control, name: "units" });
+  const { fields: extraExpenseFields, append: appendExpense, remove: removeExpense } = useFieldArray({ control, name: "additionalExpenses" });
 
   const data = watch();
-  
-  // Provide fallbacks for potentially empty string inputs by parsing to float
+
   const parsedData: InvestmentData = {
     ...data,
     purchasePrice: parseFloat(data.purchasePrice as any) || 0,
@@ -63,6 +186,7 @@ export default function Calculator() {
     accounting: parseFloat(data.accounting as any) || 0,
     capex: parseFloat(data.capex as any) || 0,
     otherExpenses: parseFloat(data.otherExpenses as any) || 0,
+    additionalExpenses: (data.additionalExpenses || []).map(e => ({ ...e, amount: parseFloat(e.amount as any) || 0 })),
     extraVacancyPercent: parseFloat(data.extraVacancyPercent as any) || 0,
     rentReductionPercent: parseFloat(data.rentReductionPercent as any) || 0,
     insuranceIncreasePercent: parseFloat(data.insuranceIncreasePercent as any) || 0,
@@ -78,7 +202,7 @@ export default function Calculator() {
       ...u,
       rent: parseFloat(u.rent as any) || 0,
       otherIncome: parseFloat(u.otherIncome as any) || 0,
-    }))
+    })),
   };
 
   const results = useInvestmentCalculations(parsedData);
@@ -96,55 +220,66 @@ export default function Calculator() {
     setTimeout(() => setSavedFlash(false), 2000);
   };
 
+  const handleAddUnit = useCallback(() => {
+    appendUnit({ name: `Unit ${unitFields.length + 1}`, rent: 0, otherIncome: 0, occupied: true });
+  }, [appendUnit, unitFields.length]);
+
+  const handleDuplicateUnit = useCallback((index: number) => {
+    const u = data.units[index];
+    insertUnit(index + 1, { ...u, name: `${u.name} (Copy)` });
+  }, [insertUnit, data.units]);
+
+  const handleAddExpense = useCallback(() => {
+    appendExpense({ id: `custom-${Date.now()}`, name: "New Expense", amount: 0 });
+  }, [appendExpense]);
+
   const GradeBadge = ({ grade }: { grade: string }) => {
-    let colorClass = "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700";
-    
-    if (grade === "Excellent") colorClass = "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800/50";
-    if (grade === "Good") colorClass = "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800/50";
-    if (grade === "Poor") colorClass = "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800/50";
-    
+    let cls = "bg-gray-100 text-gray-800 border-gray-200";
+    if (grade === "Excellent") cls = "bg-green-100 text-green-800 border-green-200";
+    if (grade === "Good") cls = "bg-yellow-100 text-yellow-800 border-yellow-200";
+    if (grade === "Poor") cls = "bg-red-100 text-red-800 border-red-200";
     return (
-      <Badge variant="outline" className={cn("px-2 py-0.5 text-xs font-semibold uppercase tracking-wider", colorClass)} data-testid={`grade-${grade.toLowerCase()}`}>
+      <Badge variant="outline" className={cn("px-2 py-0.5 text-xs font-semibold uppercase tracking-wider", cls)} data-testid={`grade-${grade.toLowerCase()}`}>
         {grade}
       </Badge>
     );
   };
 
-  const MetricRow = ({ label, value, format = "currency", colorClass = "", testId = "" }: { label: string, value: number | null | undefined, format?: "currency" | "percent" | "number", colorClass?: string, testId?: string }) => {
-    let formattedValue = "N/A";
-    if (format === "currency") formattedValue = formatCurrency(value);
-    else if (format === "percent") formattedValue = formatPercent(value);
-    else if (format === "number") formattedValue = formatNumber(value);
-
+  const MetricRow = ({ label, value, format = "currency", colorClass = "", testId = "" }: {
+    label: string; value: number | null | undefined; format?: "currency" | "percent" | "number"; colorClass?: string; testId?: string;
+  }) => {
+    let fv = "N/A";
+    if (format === "currency") fv = formatCurrency(value);
+    else if (format === "percent") fv = formatPercent(value);
+    else if (format === "number") fv = formatNumber(value);
     return (
       <div className="flex justify-between items-center py-1.5">
-        <span className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</span>
-        <span className={cn("text-sm font-semibold text-slate-900 dark:text-slate-100", colorClass)} data-testid={testId}>
-          {formattedValue}
-        </span>
+        <span className="text-sm font-medium text-slate-500">{label}</span>
+        <span className={cn("text-sm font-semibold text-slate-900", colorClass)} data-testid={testId}>{fv}</span>
       </div>
     );
   };
 
   const getCocColor = (coc: number | null) => {
     if (coc === null) return "";
-    if (coc >= parsedData.excellentCoc) return "text-green-600 dark:text-green-400";
-    if (coc < parsedData.minCoc) return "text-red-600 dark:text-red-400";
-    return "text-yellow-600 dark:text-yellow-400";
+    if (coc >= parsedData.excellentCoc) return "text-green-600";
+    if (coc < parsedData.minCoc) return "text-red-600";
+    return "text-yellow-600";
   };
-
   const getDscrColor = (dscr: number | null, isStressed = false) => {
     if (dscr === null) return "";
     const min = isStressed ? parsedData.minStressDscr : parsedData.minDscr;
     const excellent = isStressed ? parsedData.excellentStressDscr : parsedData.excellentDscr;
-    
-    if (dscr >= excellent) return "text-green-600 dark:text-green-400";
-    if (dscr < min) return "text-red-600 dark:text-red-400";
-    return "text-yellow-600 dark:text-yellow-400";
+    if (dscr >= excellent) return "text-green-600";
+    if (dscr < min) return "text-red-600";
+    return "text-yellow-600";
   };
 
+  const inputCls = "font-mono bg-slate-50 border-slate-200 focus-visible:ring-blue-300/50";
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans selection:bg-primary/20 selection:text-primary">
+    <div className="min-h-screen bg-slate-50 font-sans">
+      {/* ── Header ─────────────────────────────────────────────────────── */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -155,190 +290,187 @@ export default function Calculator() {
           </div>
           <div className="flex items-center gap-3">
             <div className="text-xs font-mono text-slate-400 hidden sm:flex items-center gap-1">
-              LIVE CALCULATION <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse ml-1"></span>
+              LIVE CALCULATION <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse ml-1" />
             </div>
             <Link href="/compare" data-testid="link-compare">
               <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-xs gap-1.5">
                 <BarChart3 className="w-3.5 h-3.5" />
                 Compare
                 {analyses.length > 0 && (
-                  <span className="bg-blue-50 text-blue-600 border border-blue-200 rounded-full text-[10px] px-1.5 py-0 leading-4 font-mono">
-                    {analyses.length}
-                  </span>
+                  <span className="bg-blue-50 text-blue-600 border border-blue-200 rounded-full text-[10px] px-1.5 py-0 leading-4 font-mono">{analyses.length}</span>
                 )}
               </Button>
             </Link>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => exportAnalysisPdf("Current Analysis", parsedData, results)}
-              className="gap-1.5 text-xs border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-              data-testid="button-export-pdf-current"
-            >
-              <FileDown className="w-3.5 h-3.5" />
-              Export PDF
+            <Button variant="outline" size="sm" onClick={() => exportAnalysisPdf("Current Analysis", parsedData, results)}
+              className="gap-1.5 text-xs border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-50" data-testid="button-export-pdf-current">
+              <FileDown className="w-3.5 h-3.5" /> Export PDF
             </Button>
-            <Button
-              size="sm"
-              onClick={() => setSaveDialogOpen(true)}
-              className={cn(
-                "gap-1.5 text-xs transition-all duration-300",
-                savedFlash ? "bg-green-600 hover:bg-green-600" : ""
-              )}
-              data-testid="button-save-analysis"
-            >
-              <Save className="w-3.5 h-3.5" />
-              {savedFlash ? "Saved!" : "Save Analysis"}
+            <Button size="sm" onClick={() => setSaveDialogOpen(true)}
+              className={cn("gap-1.5 text-xs transition-all duration-300", savedFlash ? "bg-green-600 hover:bg-green-600" : "")}
+              data-testid="button-save-analysis">
+              <Save className="w-3.5 h-3.5" /> {savedFlash ? "Saved!" : "Save Analysis"}
             </Button>
           </div>
         </div>
       </header>
 
+      {/* ── Save Dialog ─────────────────────────────────────────────────── */}
       <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
         <DialogContent className="sm:max-w-sm" data-testid="dialog-save">
-          <DialogHeader>
-            <DialogTitle>Save Analysis</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Save Analysis</DialogTitle></DialogHeader>
           <div className="py-2">
-            <Label htmlFor="property-name" className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-2">
-              Property Name
-            </Label>
-            <Input
-              id="property-name"
-              placeholder="e.g. 123 Main St, 4-plex"
-              value={propertyName}
-              onChange={e => setPropertyName(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleSave()}
-              autoFocus
-              data-testid="input-property-name"
-            />
+            <Label htmlFor="property-name" className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-2">Property Name</Label>
+            <Input id="property-name" placeholder="e.g. 123 Main St, 4-plex" value={propertyName}
+              onChange={e => setPropertyName(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSave()}
+              autoFocus data-testid="input-property-name" />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSaveDialogOpen(false)} data-testid="button-cancel-save">
-              Cancel
-            </Button>
-            <Button onClick={handleSave} data-testid="button-confirm-save">
-              Save
-            </Button>
+            <Button variant="outline" onClick={() => setSaveDialogOpen(false)} data-testid="button-cancel-save">Cancel</Button>
+            <Button onClick={handleSave} data-testid="button-confirm-save">Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
-          
-          {/* Inputs Column */}
+
+          {/* ── Inputs Column ───────────────────────────────────────────── */}
           <div className="flex-1 space-y-6 lg:max-w-[65%]">
-            
+
             {/* Property & Financing */}
-            <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-              <div className="h-1 bg-primary w-full"></div>
+            <Card className="border-slate-200 shadow-sm overflow-hidden">
+              <div className="h-1 bg-blue-500 w-full" />
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-slate-500" />
-                  Property & Financing
+                  <DollarSign className="w-5 h-5 text-slate-400" /> Property & Financing
                 </CardTitle>
                 <CardDescription>Core acquisition and loan parameters</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="purchasePrice" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Purchase Price ($)</Label>
-                  <Input id="purchasePrice" type="number" {...register("purchasePrice")} data-testid="input-purchase-price" className="font-mono bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus-visible:ring-primary/50" />
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Purchase Price</Label>
+                  <Controller name="purchasePrice" control={control} render={({ field }) => (
+                    <CurrencyField value={field.value} onChange={v => field.onChange(v)} step={25000} testId="input-purchase-price" />
+                  )} />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="downPaymentPercent" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Down Payment (%)</Label>
-                  <Input id="downPaymentPercent" type="number" step="0.1" {...register("downPaymentPercent")} data-testid="input-down-payment" className="font-mono bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus-visible:ring-primary/50" />
+                  <Input id="downPaymentPercent" type="number" step="1" min="0" max="100"
+                    {...register("downPaymentPercent")} data-testid="input-down-payment" className={inputCls} />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="interestRate" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Interest Rate (%)</Label>
-                  <Input id="interestRate" type="number" step="0.1" {...register("interestRate")} data-testid="input-interest-rate" className="font-mono bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus-visible:ring-primary/50" />
+                  <Input id="interestRate" type="number" step="0.125" min="0"
+                    {...register("interestRate")} data-testid="input-interest-rate" className={inputCls} />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="loanTerm" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Loan Term (Years)</Label>
-                  <Input id="loanTerm" type="number" {...register("loanTerm")} data-testid="input-loan-term" className="font-mono bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus-visible:ring-primary/50" />
+                  <Input id="loanTerm" type="number" step="1" min="1"
+                    {...register("loanTerm")} data-testid="input-loan-term" className={inputCls} />
                 </div>
               </CardContent>
             </Card>
 
             {/* Rental Income */}
-            <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-              <CardHeader className="pb-4">
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <Building className="w-5 h-5 text-slate-500" />
-                  Rental Income
+                  <Building className="w-5 h-5 text-slate-400" /> Rental Income
                 </CardTitle>
                 <CardDescription>Monthly unit revenue and overall vacancy</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="mb-6">
-                  <Label htmlFor="vacancyRatePercent" className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-2">Base Vacancy Rate (%)</Label>
-                  <Input id="vacancyRatePercent" type="number" step="0.1" {...register("vacancyRatePercent")} data-testid="input-vacancy-rate" className="w-1/3 font-mono bg-slate-50 dark:bg-slate-900" />
+                {/* Vacancy rate */}
+                <div className="mb-5 flex items-center gap-4">
+                  <div className="space-y-1.5 w-40">
+                    <Label htmlFor="vacancyRatePercent" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Base Vacancy (%)</Label>
+                    <Input id="vacancyRatePercent" type="number" step="1" min="0" max="100"
+                      {...register("vacancyRatePercent")} data-testid="input-vacancy-rate" className={inputCls} />
+                  </div>
                 </div>
-                
-                <div className="border rounded-md border-slate-200 dark:border-slate-800 overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-100 dark:bg-slate-900 text-xs uppercase font-semibold text-slate-500 border-b border-slate-200 dark:border-slate-800">
+
+                {/* Units table */}
+                <div className="border border-slate-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b border-slate-200">
                       <tr>
-                        <th className="px-4 py-3">Unit</th>
-                        <th className="px-4 py-3">Rent ($)</th>
-                        <th className="px-4 py-3">Other ($)</th>
-                        <th className="px-4 py-3 text-center">Occupied</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 w-36">Unit</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Rent / mo</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Other / mo</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 w-20">Occupied</th>
+                        <th className="px-3 py-2.5 w-16" />
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                    <tbody className="divide-y divide-slate-100">
                       {unitFields.map((field, index) => (
-                        <tr key={field.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
-                          <td className="px-4 py-2 font-medium text-slate-700 dark:text-slate-300">Unit {index + 1}</td>
-                          <td className="px-4 py-2">
-                            <Input 
-                              type="number" 
-                              {...register(`units.${index}.rent`)} 
-                              className="h-8 font-mono text-sm border-transparent hover:border-slate-200 focus:border-primary focus-visible:ring-0 bg-transparent px-2"
-                              data-testid={`input-unit-${index}-rent`}
-                            />
+                        <tr key={field.id} className="hover:bg-slate-50/60 transition-colors group">
+                          <td className="px-3 py-2">
+                            <Controller name={`units.${index}.name`} control={control} render={({ field: f }) => (
+                              <InlineLabel value={f.value || `Unit ${index + 1}`} onChange={v => f.onChange(v)} />
+                            )} />
                           </td>
-                          <td className="px-4 py-2">
-                            <Input 
-                              type="number" 
-                              {...register(`units.${index}.otherIncome`)} 
-                              className="h-8 font-mono text-sm border-transparent hover:border-slate-200 focus:border-primary focus-visible:ring-0 bg-transparent px-2"
-                              data-testid={`input-unit-${index}-other`}
-                            />
+                          <td className="px-3 py-2">
+                            <Controller name={`units.${index}.rent`} control={control} render={({ field: f }) => (
+                              <CurrencyField value={f.value} onChange={v => f.onChange(v)} step={50}
+                                testId={`input-unit-${index}-rent`} className="h-8 text-xs" />
+                            )} />
                           </td>
-                          <td className="px-4 py-2 text-center">
-                            <Controller
-                              name={`units.${index}.occupied`}
-                              control={control}
-                              render={({ field }) => (
-                                <Checkbox 
-                                  checked={field.value} 
-                                  onCheckedChange={field.onChange}
-                                  data-testid={`checkbox-unit-${index}-occupied`}
-                                  className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                                />
+                          <td className="px-3 py-2">
+                            <Controller name={`units.${index}.otherIncome`} control={control} render={({ field: f }) => (
+                              <CurrencyField value={f.value} onChange={v => f.onChange(v)} step={50}
+                                testId={`input-unit-${index}-other`} className="h-8 text-xs" />
+                            )} />
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <Controller name={`units.${index}.occupied`} control={control} render={({ field: f }) => (
+                              <div className="flex justify-center">
+                                <OccupiedToggle checked={f.value} onChange={f.onChange}
+                                  testId={`toggle-unit-${index}-occupied`} />
+                              </div>
+                            )} />
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button type="button" onClick={() => handleDuplicateUnit(index)}
+                                className="p-1 rounded text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+                                title="Duplicate unit" data-testid={`button-duplicate-unit-${index}`}>
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                              {unitFields.length > 1 && (
+                                <button type="button" onClick={() => removeUnit(index)}
+                                  className="p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                  title="Remove unit" data-testid={`button-remove-unit-${index}`}>
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
                               )}
-                            />
+                            </div>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+
+                <button type="button" onClick={handleAddUnit}
+                  className="mt-3 flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded px-2 py-1.5 transition-colors"
+                  data-testid="button-add-unit">
+                  <Plus className="w-3.5 h-3.5" /> Add Unit
+                </button>
               </CardContent>
             </Card>
 
             {/* Operating Expenses */}
-            <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-              <CardHeader className="pb-4">
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-slate-500" />
-                  Operating Expenses <span className="text-sm font-normal text-slate-500">(Monthly)</span>
+                  <TrendingUp className="w-5 h-5 text-slate-400" />
+                  Operating Expenses <span className="text-sm font-normal text-slate-400 ml-1">/ month</span>
                 </CardTitle>
-                <CardDescription>Enter monthly values, annualized automatically</CardDescription>
+                <CardDescription>Enter monthly values — annualized automatically</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                  {[
+                <div className="space-y-1">
+                  {([
                     { name: "taxes", label: "Property Taxes" },
                     { name: "insurance", label: "Insurance" },
                     { name: "utilities", label: "Utilities" },
@@ -348,72 +480,85 @@ export default function Calculator() {
                     { name: "management", label: "Property Management" },
                     { name: "accounting", label: "Accounting & Bookkeeping" },
                     { name: "capex", label: "CapEx Reserve" },
-                    { name: "otherExpenses", label: "Other" }
-                  ].map((expense) => (
-                    <div key={expense.name} className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/60 pb-2">
-                      <Label htmlFor={expense.name} className="text-sm text-slate-600 dark:text-slate-400">{expense.label}</Label>
-                      <div className="relative w-32">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <span className="text-slate-400 sm:text-sm">$</span>
+                    { name: "otherExpenses", label: "Other" },
+                  ] as const).map((expense) => (
+                    <div key={expense.name} className="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0">
+                      <span className="text-sm text-slate-600">{expense.label}</span>
+                      <div className="w-36">
+                        <Controller name={expense.name as any} control={control} render={({ field: f }) => (
+                          <CurrencyField value={f.value} onChange={v => f.onChange(v)} step={50}
+                            testId={`input-expense-${expense.name}`} />
+                        )} />
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Custom additional expenses */}
+                  {extraExpenseFields.map((field, index) => (
+                    <div key={field.id} className="flex items-center justify-between py-1.5 border-b border-slate-100 group">
+                      <Controller name={`additionalExpenses.${index}.name`} control={control} render={({ field: f }) => (
+                        <InlineLabel value={f.value || "Custom Expense"} onChange={v => f.onChange(v)} />
+                      )} />
+                      <div className="flex items-center gap-2">
+                        <div className="w-36">
+                          <Controller name={`additionalExpenses.${index}.amount`} control={control} render={({ field: f }) => (
+                            <CurrencyField value={f.value} onChange={v => f.onChange(v)} step={50}
+                              testId={`input-extra-expense-${index}`} />
+                          )} />
                         </div>
-                        <Input 
-                          id={expense.name} 
-                          type="number" 
-                          {...register(expense.name as keyof InvestmentData)} 
-                          data-testid={`input-expense-${expense.name}`}
-                          className="pl-7 h-9 font-mono text-right bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800"
-                        />
+                        <button type="button" onClick={() => removeExpense(index)}
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                          title="Remove" data-testid={`button-remove-expense-${index}`}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
+
+                <button type="button" onClick={handleAddExpense}
+                  className="mt-3 flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded px-2 py-1.5 transition-colors"
+                  data-testid="button-add-expense">
+                  <Plus className="w-3.5 h-3.5" /> Add Expense
+                </button>
               </CardContent>
             </Card>
 
             {/* Stress Test */}
-            <Card className="border-slate-200 dark:border-slate-800 shadow-sm border-l-4 border-l-amber-500">
+            <Card className="border-slate-200 shadow-sm border-l-4 border-l-amber-400">
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-amber-500" />
-                  Stress Test Parameters
+                  <AlertTriangle className="w-5 h-5 text-amber-500" /> Stress Test Parameters
                 </CardTitle>
                 <CardDescription>Evaluate resilience under adverse conditions</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="extraVacancyPercent" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Extra Vacancy (%)</Label>
-                  <Input id="extraVacancyPercent" type="number" step="0.1" {...register("extraVacancyPercent")} data-testid="input-stress-vacancy" className="font-mono bg-slate-50 dark:bg-slate-900" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="rentReductionPercent" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Rent Reduction (%)</Label>
-                  <Input id="rentReductionPercent" type="number" step="0.1" {...register("rentReductionPercent")} data-testid="input-stress-rent" className="font-mono bg-slate-50 dark:bg-slate-900" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="insuranceIncreasePercent" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Insurance Increase (%)</Label>
-                  <Input id="insuranceIncreasePercent" type="number" step="0.1" {...register("insuranceIncreasePercent")} data-testid="input-stress-insurance" className="font-mono bg-slate-50 dark:bg-slate-900" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="taxIncreasePercent" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Tax Increase (%)</Label>
-                  <Input id="taxIncreasePercent" type="number" step="0.1" {...register("taxIncreasePercent")} data-testid="input-stress-tax" className="font-mono bg-slate-50 dark:bg-slate-900" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maintenanceIncreasePercent" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Maintenance Increase (%)</Label>
-                  <Input id="maintenanceIncreasePercent" type="number" step="0.1" {...register("maintenanceIncreasePercent")} data-testid="input-stress-maintenance" className="font-mono bg-slate-50 dark:bg-slate-900" />
-                </div>
+                {([
+                  { id: "extraVacancyPercent", label: "Extra Vacancy (%)", testId: "input-stress-vacancy" },
+                  { id: "rentReductionPercent", label: "Rent Reduction (%)", testId: "input-stress-rent" },
+                  { id: "insuranceIncreasePercent", label: "Insurance Increase (%)", testId: "input-stress-insurance" },
+                  { id: "taxIncreasePercent", label: "Tax Increase (%)", testId: "input-stress-tax" },
+                  { id: "maintenanceIncreasePercent", label: "Maintenance Increase (%)", testId: "input-stress-maintenance" },
+                ] as const).map(f => (
+                  <div key={f.id} className="space-y-1.5">
+                    <Label htmlFor={f.id} className="text-xs font-semibold uppercase tracking-wider text-slate-500">{f.label}</Label>
+                    <Input id={f.id} type="number" step="1" min="0"
+                      {...register(f.id)} data-testid={f.testId} className={inputCls} />
+                  </div>
+                ))}
               </CardContent>
             </Card>
 
             {/* Grading Settings */}
             <Collapsible open={gradingOpen} onOpenChange={setGradingOpen}>
-              <Card className="border-slate-200 dark:border-slate-800 shadow-sm mb-12 lg:mb-0">
+              <Card className="border-slate-200 shadow-sm mb-12 lg:mb-0">
                 <CollapsibleTrigger className="w-full">
-                  <CardHeader className="pb-4 flex flex-row items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/50 rounded-t-xl transition-colors">
+                  <CardHeader className="pb-4 flex flex-row items-center justify-between cursor-pointer hover:bg-slate-50 rounded-t-xl transition-colors">
                     <div>
                       <CardTitle className="text-lg flex items-center gap-2 text-left">
-                        <Percent className="w-5 h-5 text-slate-500" />
-                        Grading Settings
+                        <Percent className="w-5 h-5 text-slate-400" /> Grading Settings
                       </CardTitle>
-                      <CardDescription className="text-left">Adjust thresholds for Excellent/Good/Poor ratings</CardDescription>
+                      <CardDescription className="text-left">Adjust thresholds for Excellent / Good / Poor ratings</CardDescription>
                     </div>
                     <ChevronDown className={cn("w-5 h-5 text-slate-400 transition-transform duration-200", gradingOpen && "rotate-180")} />
                   </CardHeader>
@@ -421,30 +566,19 @@ export default function Calculator() {
                 <CollapsibleContent>
                   <Separator />
                   <CardContent className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="minCoc" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Minimum CoC (%)</Label>
-                      <Input id="minCoc" type="number" step="0.1" {...register("minCoc")} className="font-mono h-8 text-sm" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="excellentCoc" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Excellent CoC (%)</Label>
-                      <Input id="excellentCoc" type="number" step="0.1" {...register("excellentCoc")} className="font-mono h-8 text-sm" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="minDscr" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Minimum DSCR</Label>
-                      <Input id="minDscr" type="number" step="0.01" {...register("minDscr")} className="font-mono h-8 text-sm" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="excellentDscr" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Excellent DSCR</Label>
-                      <Input id="excellentDscr" type="number" step="0.01" {...register("excellentDscr")} className="font-mono h-8 text-sm" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="minStressDscr" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Min Stress DSCR</Label>
-                      <Input id="minStressDscr" type="number" step="0.01" {...register("minStressDscr")} className="font-mono h-8 text-sm" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="excellentStressDscr" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Excellent Stress DSCR</Label>
-                      <Input id="excellentStressDscr" type="number" step="0.01" {...register("excellentStressDscr")} className="font-mono h-8 text-sm" />
-                    </div>
+                    {([
+                      { id: "minCoc", label: "Minimum CoC (%)", step: "0.1" },
+                      { id: "excellentCoc", label: "Excellent CoC (%)", step: "0.1" },
+                      { id: "minDscr", label: "Minimum DSCR", step: "0.01" },
+                      { id: "excellentDscr", label: "Excellent DSCR", step: "0.01" },
+                      { id: "minStressDscr", label: "Min Stress DSCR", step: "0.01" },
+                      { id: "excellentStressDscr", label: "Excellent Stress DSCR", step: "0.01" },
+                    ] as const).map(f => (
+                      <div key={f.id} className="space-y-1.5">
+                        <Label htmlFor={f.id} className="text-xs font-semibold uppercase tracking-wider text-slate-500">{f.label}</Label>
+                        <Input id={f.id} type="number" step={f.step} {...register(f.id)} className="font-mono h-8 text-sm" />
+                      </div>
+                    ))}
                   </CardContent>
                 </CollapsibleContent>
               </Card>
@@ -452,29 +586,26 @@ export default function Calculator() {
 
           </div>
 
-          {/* Results Column */}
+          {/* ── Results Column ───────────────────────────────────────────── */}
           <div className="flex-1 lg:max-w-[35%] relative">
             <div className="sticky top-20 flex flex-col gap-6 z-20">
-              
+
               <Card className="border-slate-200 bg-white shadow-sm overflow-hidden">
                 <div className="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                   <h2 className="text-lg font-semibold tracking-tight text-slate-800 flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                    <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
                     Terminal Output
                   </h2>
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => exportAnalysisPdf("Current Analysis", parsedData, results)}
+                    <button onClick={() => exportAnalysisPdf("Current Analysis", parsedData, results)}
                       className="text-slate-400 hover:text-slate-700 transition-colors p-1 rounded hover:bg-slate-200"
-                      title="Export PDF"
-                      data-testid="button-export-pdf-panel"
-                    >
+                      title="Export PDF" data-testid="button-export-pdf-panel">
                       <FileDown className="w-4 h-4" />
                     </button>
                     <GradeBadge grade={results.investmentGrade} />
                   </div>
                 </div>
-                
+
                 <CardContent className="p-0">
                   <div className="p-5 space-y-1">
                     <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Core Financials</div>
@@ -482,82 +613,48 @@ export default function Calculator() {
                     <MetricRow label="Annual Debt Service" value={results.annualDebtService} testId="result-debt-service" />
                     <MetricRow label="Effective Gross Income" value={results.egi} testId="result-egi" />
                     <MetricRow label="Total OpEx (Annual)" value={results.totalOperatingExpenses} testId="result-opex" />
-                    <div className="h-px bg-slate-100 my-2"></div>
+                    <div className="h-px bg-slate-100 my-2" />
                     <MetricRow label="Net Operating Income" value={results.noi} colorClass="text-slate-900 text-base font-bold" testId="result-noi" />
-                    <MetricRow 
-                      label="Cash Flow (Annual)" 
-                      value={results.cashFlow} 
-                      colorClass={cn("text-base font-bold", results.cashFlow !== null && results.cashFlow >= 0 ? "text-green-600" : "text-red-600")} 
-                      testId="result-cash-flow" 
-                    />
+                    <MetricRow label="Cash Flow (Annual)" value={results.cashFlow}
+                      colorClass={cn("text-base font-bold", results.cashFlow >= 0 ? "text-green-600" : "text-red-600")}
+                      testId="result-cash-flow" />
                   </div>
-
                   <div className="bg-slate-50 p-5 border-t border-slate-100">
                     <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Yield Metrics</div>
-                    <MetricRow 
-                      label="Cash-on-Cash Return" 
-                      value={results.coc} 
-                      format="percent" 
-                      colorClass={cn("text-lg font-bold", getCocColor(results.coc))}
-                      testId="result-coc" 
-                    />
-                    <MetricRow 
-                      label="Debt Service Coverage Ratio" 
-                      value={results.dscr} 
-                      format="number" 
-                      colorClass={cn("text-lg font-bold", getDscrColor(results.dscr))}
-                      testId="result-dscr" 
-                    />
-                    <MetricRow 
-                      label="Cap Rate" 
-                      value={results.capRate} 
-                      format="percent" 
-                      colorClass="text-slate-700 font-semibold"
-                      testId="result-cap-rate" 
-                    />
+                    <MetricRow label="Cash-on-Cash Return" value={results.coc} format="percent"
+                      colorClass={cn("text-lg font-bold", getCocColor(results.coc))} testId="result-coc" />
+                    <MetricRow label="Debt Service Coverage Ratio" value={results.dscr} format="number"
+                      colorClass={cn("text-lg font-bold", getDscrColor(results.dscr))} testId="result-dscr" />
+                    <MetricRow label="Cap Rate" value={results.capRate} format="percent"
+                      colorClass="text-slate-700 font-semibold" testId="result-cap-rate" />
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Stressed Results */}
               <Card className="border-amber-200 bg-amber-50 shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-amber-200 bg-amber-100/60 flex justify-between items-center">
                   <h2 className="text-md font-semibold tracking-tight text-amber-800 flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4" />
-                    Stressed Scenario
+                    <AlertTriangle className="w-4 h-4" /> Stressed Scenario
                   </h2>
                   <GradeBadge grade={results.stressGrade} />
                 </div>
-                
                 <CardContent className="p-5 space-y-1">
                   <MetricRow label="Stressed NOI" value={results.stressedNoi} testId="result-stressed-noi" />
-                  <MetricRow 
-                    label="Stressed Cash Flow" 
-                    value={results.stressedCashFlow} 
-                    colorClass={cn("font-bold", results.stressedCashFlow !== null && results.stressedCashFlow >= 0 ? "text-green-600" : "text-red-600")} 
-                    testId="result-stressed-cash-flow" 
-                  />
-                  <div className="h-px bg-amber-200 my-2"></div>
-                  <MetricRow 
-                    label="Stressed DSCR" 
-                    value={results.stressedDscr} 
-                    format="number" 
+                  <MetricRow label="Stressed Cash Flow" value={results.stressedCashFlow}
+                    colorClass={cn("font-bold", results.stressedCashFlow >= 0 ? "text-green-600" : "text-red-600")}
+                    testId="result-stressed-cash-flow" />
+                  <div className="h-px bg-amber-200 my-2" />
+                  <MetricRow label="Stressed DSCR" value={results.stressedDscr} format="number"
                     colorClass={cn("text-base font-bold", getDscrColor(results.stressedDscr, true))}
-                    testId="result-stressed-dscr" 
-                  />
-                  <MetricRow 
-                    label="Stressed Cap Rate" 
-                    value={results.stressedCapRate} 
-                    format="percent" 
-                    colorClass="text-slate-700"
-                    testId="result-stressed-cap-rate" 
-                  />
+                    testId="result-stressed-dscr" />
+                  <MetricRow label="Stressed Cap Rate" value={results.stressedCapRate} format="percent"
+                    colorClass="text-slate-700" testId="result-stressed-cap-rate" />
                 </CardContent>
               </Card>
-              
+
             </div>
           </div>
-          
+
         </div>
       </main>
     </div>
