@@ -33,7 +33,7 @@ const formatNumber = (value: number | null | undefined) => {
 const fmtComma = (v: number) =>
   new Intl.NumberFormat("en-US").format(v);
 
-// ─── Currency input: formatted display when blurred, raw number when focused ─
+// ─── Currency input: always type=number so arrows work on hover; formatted overlay when blurred ─
 function CurrencyField({
   value, onChange, step = 1, testId, className, placeholder
 }: {
@@ -45,51 +45,37 @@ function CurrencyField({
   placeholder?: string;
 }) {
   const [focused, setFocused] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
   const numVal = parseFloat(value as string) || 0;
-
-  const handleFocus = () => {
-    setFocused(true);
-    setTimeout(() => inputRef.current?.select(), 0);
-  };
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    setFocused(false);
-    onChange(parseFloat(e.target.value) || 0);
-  };
 
   return (
     <div className="relative">
-      {focused ? (
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none select-none">$</span>
-          <input
-            ref={inputRef}
-            type="number"
-            step={step}
-            defaultValue={numVal}
-            onBlur={handleBlur}
-            data-testid={testId}
-            placeholder={placeholder}
-            autoFocus
-            className={cn(
-              "pl-6 h-10 w-full rounded-md border border-blue-400 bg-white px-3 py-2 text-sm font-mono ring-2 ring-blue-200 outline-none",
-              className
-            )}
-          />
+      {/* Always a number input so spin arrows work on hover without needing to click first */}
+      <input
+        type="number"
+        step={step}
+        value={numVal === 0 ? "" : numVal}
+        onChange={e => onChange(parseFloat(e.target.value) || 0)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        data-testid={testId}
+        placeholder={placeholder || "0"}
+        className={cn(
+          "h-10 w-full rounded-md border font-mono text-sm pl-8 pr-3 py-2 outline-none transition-colors",
+          focused
+            ? "border-blue-400 bg-white ring-2 ring-blue-200 text-slate-900"
+            : "border-slate-200 bg-slate-50 text-transparent caret-transparent",
+          className
+        )}
+      />
+      {/* Dollar prefix — always visible */}
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none select-none">$</span>
+      {/* Formatted overlay when blurred — pointer-events-none so clicks/arrows pass through */}
+      {!focused && (
+        <div className="absolute inset-0 flex items-center pl-8 pr-8 pointer-events-none">
+          <span className="text-sm font-mono text-slate-800 truncate">
+            {numVal > 0 ? fmtComma(numVal) : <span className="text-slate-400">{placeholder || "0"}</span>}
+          </span>
         </div>
-      ) : (
-        <input
-          type="text"
-          readOnly
-          value={numVal > 0 ? `$${fmtComma(numVal)}` : ""}
-          onFocus={handleFocus}
-          data-testid={testId}
-          placeholder={placeholder || "$0"}
-          className={cn(
-            "h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-mono cursor-text",
-            className
-          )}
-        />
       )}
     </div>
   );
