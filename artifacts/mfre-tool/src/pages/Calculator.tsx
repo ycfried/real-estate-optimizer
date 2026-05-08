@@ -241,7 +241,11 @@ export default function Calculator() {
     return (
       <div className="flex justify-between items-center py-1.5">
         <span className="text-sm font-medium text-slate-500">{label}</span>
-        <span className={cn("text-sm font-semibold text-slate-900", colorClass)} data-testid={testId}>{fv}</span>
+        <span
+          className={cn("text-sm font-semibold text-slate-900 tabular-nums tracking-tight", colorClass)}
+          style={{ fontVariantNumeric: "tabular-nums" }}
+          data-testid={testId}
+        >{fv}</span>
       </div>
     );
   };
