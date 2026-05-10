@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import { SavedAnalysis, SavedAnalysisResults } from "@/hooks/use-saved-analyses";
 import { InvestmentData } from "@/hooks/use-investment-calculations";
-
+ 
 // ── Formatters ────────────────────────────────────────────────────────────────
 const fmt$ = (v: number | null | undefined) => {
   if (v === null || v === undefined || isNaN(v as number)) return "N/A";
@@ -17,7 +17,7 @@ const fmtNum = (v: number | null | undefined) => {
 };
 const fmtDate = (ts: number) =>
   new Date(ts).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-
+ 
 // ── Color palette matching the app's light scheme ─────────────────────────────
 const C = {
   blue:        [59, 130, 246]   as [number, number, number],
@@ -42,7 +42,7 @@ const C = {
   amberLight:  [255, 251, 235]  as [number, number, number], // amber-50
   amberBorder: [252, 211, 77]   as [number, number, number], // amber-300
 };
-
+ 
 function gradeColor(grade: string): [number, number, number] {
   if (grade === "Excellent") return C.green;
   if (grade === "Good") return C.yellow;
@@ -71,22 +71,22 @@ function dscrColor(v: number | null, min: number, excellent: number): [number, n
   if (v < min) return C.red;
   return C.yellow;
 }
-
+ 
 // ── Shared page header (smaller variant for page 2) ───────────────────────────
 function drawPageHeader(doc: jsPDF, PW: number, ML: number, MR: number, small = false): number {
   // White background
   doc.setFillColor(...C.white);
   doc.rect(0, 0, PW, small ? 14 : 22, "F");
-
+ 
   // Blue top accent bar
   doc.setFillColor(...C.blue);
   doc.rect(0, 0, PW, small ? 2 : 3, "F");
-
+ 
   // Border bottom
   doc.setDrawColor(...C.border);
   doc.setLineWidth(0.3);
   doc.line(0, small ? 14 : 22, PW, small ? 14 : 22);
-
+ 
   if (small) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
@@ -97,7 +97,7 @@ function drawPageHeader(doc: jsPDF, PW: number, ML: number, MR: number, small = 
     doc.text("Terminal  —  Investment Analysis (continued)", ML + 14, 10);
     return 20;
   }
-
+ 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.setTextColor(...C.text);
@@ -106,15 +106,15 @@ function drawPageHeader(doc: jsPDF, PW: number, ML: number, MR: number, small = 
   doc.setFontSize(13);
   doc.setTextColor(...C.mutedLight);
   doc.text("Terminal", ML + 22, 14);
-
+ 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
   doc.setTextColor(...C.blue);
   doc.text("INVESTMENT ANALYSIS REPORT", PW - MR, 14, { align: "right" });
-
+ 
   return 28;
 }
-
+ 
 // ── Page footer ───────────────────────────────────────────────────────────────
 function drawPageFooter(doc: jsPDF, PW: number, PH: number, ML: number, MR: number, page: number, total: number) {
   doc.setDrawColor(...C.border);
@@ -126,7 +126,7 @@ function drawPageFooter(doc: jsPDF, PW: number, PH: number, ML: number, MR: numb
   doc.text("MFRE Terminal  •  For informational purposes only. Not financial advice.", ML, PH - 6);
   doc.text(`Page ${page} of ${total}`, PW - MR, PH - 6, { align: "right" });
 }
-
+ 
 // ── Amortization milestone calculator ────────────────────────────────────────
 interface AmortMilestone {
   year: number;
@@ -135,7 +135,7 @@ interface AmortMilestone {
   balance: number;
   equityPct: number;
 }
-
+ 
 function buildAmortizationMilestones(
   loanAmount: number,
   annualRate: number,
@@ -146,10 +146,10 @@ function buildAmortizationMilestones(
   const M = r === 0
     ? loanAmount / n
     : loanAmount * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
-
+ 
   const rawYears = [5, 10, 15, 20, termYears];
   const milestoneYears = [...new Set(rawYears)].filter(y => y <= termYears);
-
+ 
   return milestoneYears.map(year => {
     const k = Math.min(year * 12, n);
     const balance = r === 0
@@ -161,42 +161,42 @@ function buildAmortizationMilestones(
     return { year, cumPrincipal, cumInterest, balance: Math.max(0, balance), equityPct };
   });
 }
-
+ 
 export function exportAnalysisPdf(name: string, data: InvestmentData, results: SavedAnalysisResults, savedAt?: number) {
   const doc = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
-
+ 
   const PW = 215.9;
   const PH = 279.4;
   const ML = 18;
   const MR = 18;
   const CW = PW - ML - MR;
   let y = 0;
-
+ 
   // ── PAGE 1 ──────────────────────────────────────────────────────────────────
   y = drawPageHeader(doc, PW, ML, MR, false);
   y += 8;
-
+ 
   // ── Property name + date + grade badges ──────────────────────────────────────
   doc.setFont("helvetica", "bold");
   doc.setFontSize(17);
   doc.setTextColor(...C.text);
   doc.text(name, ML, y);
-
+ 
   const dateStr = savedAt ? fmtDate(savedAt) : fmtDate(Date.now());
-  doc.setFont("helvetica", "normal");
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
-  doc.setTextColor(...C.text);
+  doc.setTextColor(...C.text); // BLACK, not muted
   doc.text(`Generated ${dateStr}`, PW - MR, y, { align: "right" });
   y += 5;
-
+ 
   // Thin blue underline beneath property name
   doc.setFillColor(...C.blue);
   doc.rect(ML, y, 28, 0.5, "F");
   y += 9;
-
+ 
   // Grade badges — two pill boxes side-by-side
   const bw = (CW - 6) / 2;
-  const pillH = 14;
+  const pillH = 16;
   const drawGradePill = (label: string, grade: string, x: number) => {
     const bg = gradeBgColor(grade);
     const fg = gradeColor(grade);
@@ -205,18 +205,20 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     doc.setDrawColor(...fg);
     doc.setLineWidth(0.4);
     doc.roundedRect(x, y, bw, pillH, 2, 2, "S");
+    // Label — ALL CAPS, larger, bold, black
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(8);
-    doc.setTextColor(...C.text);
-    doc.text(label, x + bw / 2, y + 4.75, { align: "center" });
+    doc.setFontSize(9);
+    doc.setTextColor(...C.text); // BLACK
+    doc.text(label.toUpperCase(), x + bw / 2, y + 5.5, { align: "center" });
+    // Grade value
     doc.setFontSize(11);
     doc.setTextColor(...fg);
-    doc.text(grade.toUpperCase(), x + bw / 2, y + 11.25, { align: "center" });
+    doc.text(grade.toUpperCase(), x + bw / 2, y + 12.5, { align: "center" });
   };
   drawGradePill("INVESTMENT GRADE", results.investmentGrade, ML);
   drawGradePill("STRESS GRADE", results.stressGrade, ML + bw + 6);
   y += pillH + 6;
-
+ 
   // ── Section header helper ─────────────────────────────────────────────────────
   const sectionHeader = (label: string) => {
     doc.setFillColor(...C.bgMid);
@@ -231,7 +233,7 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     doc.text(label.toUpperCase(), ML + 4, y + 5.3);
     y += 15; // 8mm header + 7mm breathing room before first row
   };
-
+ 
   // ── Metric row helper ─────────────────────────────────────────────────────────
   const ROW_H = 6.5;
   const metricRow = (
@@ -258,7 +260,7 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     doc.line(ML, y + 2.5, ML + CW, y + 2.5);
     y += ROW_H;
   };
-
+ 
   // ── Half-width row ────────────────────────────────────────────────────────────
   const halfRow = (
     l1: string, v1: string, c1: [number, number, number],
@@ -272,20 +274,20 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...c1);
     doc.text(v1, mid - 4, y, { align: "right" });
-
+ 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...C.muted);
     doc.text(l2, mid + 4, y);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...c2);
     doc.text(v2, ML + CW - 4, y, { align: "right" });
-
+ 
     doc.setDrawColor(...C.borderLight);
     doc.setLineWidth(0.2);
     doc.line(ML, y + 2.5, ML + CW, y + 2.5);
     y += ROW_H;
   };
-
+ 
   // ── SECTION 1: Property & Financing ──────────────────────────────────────────
   sectionHeader("Property & Financing");
   metricRow("Purchase Price", fmt$(data.purchasePrice));
@@ -296,7 +298,7 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
   metricRow("Loan", `${fmt$(results.loanAmount)}  •  ${data.interestRate}%  •  ${data.loanTerm}-yr`, C.textMid, true);
   metricRow("Annual Debt Service", fmt$(results.annualDebtService), C.textMid, true);
   y += 3;
-
+ 
   // ── SECTION 2: Income ────────────────────────────────────────────────────────
   sectionHeader("Rental Income");
   const occupiedUnits = data.units.filter(u => u.occupied).length;
@@ -305,7 +307,7 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
   metricRow("Vacancy Rate", fmtPct(data.vacancyRatePercent));
   metricRow("Effective Gross Income (EGI)", fmt$(results.egi), C.textMid, true, C.bgLight);
   y += 3;
-
+ 
   // ── SECTION 3: Core Returns ───────────────────────────────────────────────────
   sectionHeader("Core Returns");
   metricRow("Total Operating Expenses (Annual)", fmt$(results.totalOperatingExpenses));
@@ -323,6 +325,7 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     cocColor(results.coc, data.minCoc, data.excellentCoc),
     true
   );
+  // Cap Rate on its own line (not combined with CoC)
   metricRow("Cap Rate", fmtPct(results.capRate), C.textMid);
   metricRow(
     "Debt Service Coverage Ratio (DSCR)",
@@ -331,7 +334,7 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     true
   );
   y += 3;
-
+ 
   // ── SECTION 4: Stressed Scenario ─────────────────────────────────────────────
   const stressHeaderH = 8;
   doc.setFillColor(...C.amberLight);
@@ -351,12 +354,13 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
   doc.setFontSize(7.5);
   doc.setTextColor(...C.amber);
   doc.text("STRESSED SCENARIO", ML + 4, y + 5.3);
+  // Stress params on same line, right-aligned
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
   doc.setTextColor(...C.text);
   doc.text(stressParams, PW - MR - 4, y + 5.3, { align: "right" });
   y += stressHeaderH + 7;
-
+ 
   metricRow("Stressed NOI", fmt$(results.stressedNoi));
   metricRow("Stressed Cash Flow", fmt$(results.stressedCashFlow), cashFlowColor(results.stressedCashFlow), true, C.bgLight);
   metricRow(
@@ -365,19 +369,20 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     dscrColor(results.stressedDscr, data.minStressDscr, data.excellentStressDscr),
     true
   );
+  // Stressed Cap Rate on its own line
   metricRow("Stressed Cap Rate", fmtPct(results.stressedCapRate), C.textMid);
   y += 2;
-
+ 
   drawPageFooter(doc, PW, PH, ML, MR, 1, 3);
-
+ 
   // ── PAGE 2 ───────────────────────────────────────────────────────────────────
   doc.addPage();
   y = drawPageHeader(doc, PW, ML, MR, true);
   y += 6;
-
+ 
   // ── Unit Breakdown ────────────────────────────────────────────────────────────
   sectionHeader("Unit Breakdown");
-
+ 
   // Table header
   doc.setFillColor(...C.bgMid);
   doc.rect(ML, y - 1, CW, 7, "F");
@@ -390,38 +395,38 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
   doc.text("OTHER / MONTH", col.other, y + 3.5);
   doc.text("STATUS", col.status, y + 3.5);
   y += 8;
-
+ 
   data.units.forEach((unit, i) => {
     const rowBg = i % 2 === 0 ? C.white : C.bgLight;
     doc.setFillColor(...rowBg);
     doc.rect(ML, y - 1, CW, 6.5, "F");
-
+ 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(...C.textMid);
     doc.text(unit.name || `Unit ${i + 1}`, col.unit, y + 3);
-
+ 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...C.text);
     doc.text(fmt$(unit.rent), col.rent, y + 3);
     doc.text(unit.otherIncome > 0 ? fmt$(unit.otherIncome) : "—", col.other, y + 3);
-
+ 
     const statusColor = unit.occupied ? C.green : C.red;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
     doc.setTextColor(...statusColor);
     doc.text(unit.occupied ? "OCCUPIED" : "VACANT", col.status, y + 3);
-
+ 
     doc.setDrawColor(...C.borderLight);
     doc.setLineWidth(0.2);
     doc.line(ML, y + 5.5, ML + CW, y + 5.5);
     y += 6.5;
   });
   y += 5;
-
+ 
   // ── Operating Expenses Breakdown ──────────────────────────────────────────────
   sectionHeader("Operating Expenses — Monthly Detail");
-
+ 
   const expenses: [string, number][] = (
     [
       ["Property Taxes", data.taxes],
@@ -437,60 +442,61 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
       ...(data.additionalExpenses || []).map(e => [e.name, e.amount] as [string, number]),
     ] as [string, number][]
   ).filter(([, v]) => v > 0);
-
+ 
   const monthlyTotal = expenses.reduce((s, [, v]) => s + (v as number), 0);
-
+ 
   expenses.forEach(([label, monthly], i) => {
     const rowBg = i % 2 === 0 ? C.white : C.bgLight;
     doc.setFillColor(...rowBg);
     doc.rect(ML, y - 1, CW, 6.5, "F");
-
+ 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(...C.muted);
     doc.text(label as string, ML + 4, y + 3);
-
+ 
     const pct = monthlyTotal > 0 ? (((monthly as number) / monthlyTotal) * 100).toFixed(0) : "0";
     doc.setTextColor(...C.mutedLight);
     doc.setFontSize(7);
     doc.text(`${pct}%`, ML + CW / 2, y + 3, { align: "center" });
-
+ 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(...C.textMid);
     doc.text(fmt$(monthly as number), ML + CW - 4, y + 3, { align: "right" });
-
+ 
     doc.setDrawColor(...C.borderLight);
     doc.setLineWidth(0.2);
     doc.line(ML, y + 5.5, ML + CW, y + 5.5);
     y += 6.5;
   });
-
+ 
   y += 7;
-  // Total row — stronger typography and spacing from last expense divider
-  const totalRowH = 12;
+  // Total row — stronger typography, more spacing from last expense divider
+  const totalRowH = 14;
   doc.setFillColor(...C.bgMid);
   doc.rect(ML, y - 2, CW, totalRowH, "F");
-  doc.setDrawColor(...C.borderLight);
-  doc.setLineWidth(0.2);
+  doc.setDrawColor(...C.border);
+  doc.setLineWidth(0.3);
   doc.line(ML, y - 2, ML + CW, y - 2);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
+  doc.setFontSize(11);
   doc.setTextColor(...C.text);
-  doc.text("Total Monthly", ML + 4, y + 4);
-  doc.text(fmt$(monthlyTotal), ML + CW - 4, y + 4, { align: "right" });
+  doc.text("Total Monthly", ML + 4, y + 5);
+  doc.text(fmt$(monthlyTotal), ML + CW - 4, y + 5, { align: "right" });
   doc.setFontSize(9);
-  doc.text(`(${fmt$(monthlyTotal * 12)} annually)`, ML + CW - 4, y + 9, { align: "right" });
+  doc.setTextColor(...C.textMid);
+  doc.text(`(${fmt$(monthlyTotal * 12)} annually)`, ML + CW - 4, y + 10.5, { align: "right" });
   y += totalRowH + 5;
-
+ 
   y += 4;
   drawPageFooter(doc, PW, PH, ML, MR, 2, 3);
-
+ 
   // ── PAGE 3: Amortization Summary ─────────────────────────────────────────────
   doc.addPage();
   y = drawPageHeader(doc, PW, ML, MR, true);
   y += 6;
-
+ 
   // Section header
   doc.setFillColor(...C.bgMid);
   doc.rect(ML, y, CW, 8, "F");
@@ -510,7 +516,7 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     ML + CW - 4, y + 5.3, { align: "right" }
   );
   y += 15;
-
+ 
   // Intro note
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
@@ -520,21 +526,21 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     ML, y, { maxWidth: CW }
   );
   y += 10;
-
+ 
   // Build milestones
   const amortMilestones = buildAmortizationMilestones(
     results.loanAmount,
     data.interestRate,
     data.loanTerm
   );
-
+ 
   // Monthly payment for display
   const r = data.interestRate / 100 / 12;
   const n = data.loanTerm * 12;
   const monthlyPayment = r === 0
     ? results.loanAmount / n
     : results.loanAmount * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
-
+ 
   // Summary pill: monthly payment
   doc.setFillColor(...C.blueLight);
   doc.roundedRect(ML, y, CW, 14, 2, 2, "F");
@@ -550,7 +556,7 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
   doc.setTextColor(...C.blueMid);
   doc.text(fmt$(monthlyPayment), ML + CW / 2, y + 11.5, { align: "center" });
   y += 20;
-
+ 
   // Table columns: Year | Cum. Principal | Cum. Interest | Remaining Balance | % Loan Paid
   const aCol = {
     year:      ML + 4,
@@ -559,7 +565,7 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     balance:   ML + CW * 0.69,
     pct:       ML + CW - 4,
   };
-
+ 
   // Table header
   doc.setFillColor(...C.bgMid);
   doc.rect(ML, y - 1, CW, 7, "F");
@@ -576,54 +582,62 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
   doc.text("REMAINING BALANCE", aCol.balance, y + 3.5);
   doc.text("% LOAN PAID", aCol.pct, y + 3.5, { align: "right" });
   y += 9;
-
+ 
   amortMilestones.forEach(({ year, cumPrincipal, cumInterest, balance, equityPct }, i) => {
     const isLast = year === data.loanTerm;
     const rowBg = isLast ? C.bgMid : (i % 2 === 0 ? C.white : C.bgLight);
     doc.setFillColor(...rowBg);
     doc.rect(ML, y - 1, CW, 8, "F");
-
+ 
     // Year badge
     doc.setFont("helvetica", isLast ? "bold" : "normal");
     doc.setFontSize(8.5);
     if (isLast) doc.setTextColor(...C.blue); else doc.setTextColor(...C.textMid);
     doc.text(`Year ${year}`, aCol.year, y + 4);
-
+ 
     // Cumulative principal (green tone)
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     doc.setTextColor(...C.green);
     doc.text(fmt$(cumPrincipal), aCol.principal, y + 4);
-
+ 
     // Cumulative interest (amber/red)
     doc.setTextColor(...C.yellow);
     doc.text(fmt$(cumInterest), aCol.interest, y + 4);
-
+ 
     // Remaining balance
     if (isLast) doc.setTextColor(...C.green); else doc.setTextColor(...C.textMid);
     doc.text(isLast ? "$0" : fmt$(balance), aCol.balance, y + 4);
-
-    // % paid — right-aligned, bar width scaled to equityPct
-    const barMaxW = 22;
-    const barW = (equityPct / 100) * barMaxW;
-    const barX = aCol.pct - barMaxW - 2;
-    doc.setFillColor(...C.bgMid);
-    doc.rect(barX, y + 1.5, barMaxW, 3, "F");
-    doc.setFillColor(...C.blue);
-    doc.rect(barX, y + 1.5, barW, 3, "F");
+ 
+    // % paid — bar ends before reserved label zone so text never overlaps
+    const pctColRight = aCol.pct;
+    const reservedForPctLabel = 21;
+    const barEndX = pctColRight - reservedForPctLabel;
+    const preferredBarSpan = 20;
+    const minBarStart = aCol.balance + 8;
+    const usable = Math.max(0, barEndX - minBarStart);
+    const barSpan = usable < 4 ? 0 : Math.min(preferredBarSpan, usable);
+    const barX = barSpan > 0 ? barEndX - barSpan : barEndX;
+    const barFilledW = barSpan > 0 ? (equityPct / 100) * barSpan : 0;
+    if (barSpan > 0) {
+      doc.setFillColor(...C.bgMid);
+      doc.rect(barX, y + 1.5, barSpan, 3, "F");
+      doc.setFillColor(...C.blue);
+      doc.rect(barX, y + 1.5, barFilledW, 3, "F");
+    }
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7.5);
     doc.setTextColor(...C.blueMid);
     doc.text(`${equityPct.toFixed(1)}%`, aCol.pct, y + 4, { align: "right" });
-
+ 
     doc.setDrawColor(...C.borderLight);
     doc.setLineWidth(0.2);
     doc.line(ML, y + 7, ML + CW, y + 7);
     y += 8;
   });
-
+ 
   y += 10;
-
+ 
   // Total interest cost callout
   const totalInterest = amortMilestones[amortMilestones.length - 1]?.cumInterest ?? 0;
   const totalCost = results.loanAmount + totalInterest;
@@ -632,7 +646,7 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
   doc.setDrawColor(...C.border);
   doc.setLineWidth(0.25);
   doc.roundedRect(ML, y, CW, 20, 2, 2, "S");
-
+ 
   const thirdW = CW / 3;
   const callouts: [string, string, [number, number, number]][] = [
     ["LOAN AMOUNT", fmt$(results.loanAmount), C.textMid],
@@ -656,7 +670,7 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     }
   });
   y += 24;
-
+ 
   // Disclaimer note
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
@@ -665,13 +679,14 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     "Amortization figures are based on a standard fixed-rate mortgage with no extra payments. Actual totals may vary.",
     ML, y, { maxWidth: CW }
   );
-
+ 
   drawPageFooter(doc, PW, PH, ML, MR, 3, 3);
-
+ 
   const safeName = name.replace(/[^a-z0-9]/gi, "_").toLowerCase();
   doc.save(`mfre_${safeName}_analysis.pdf`);
 }
-
+ 
 export function exportFromSavedAnalysis(a: SavedAnalysis) {
   exportAnalysisPdf(a.name, a.data, a.results, a.savedAt);
 }
+ 
