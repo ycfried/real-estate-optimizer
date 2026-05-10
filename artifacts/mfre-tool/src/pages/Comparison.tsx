@@ -125,7 +125,7 @@ export default function Comparison() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3 sm:gap-4">
             <Link href="/" data-testid="link-back-to-calculator">
@@ -177,15 +177,24 @@ export default function Comparison() {
             </Link>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-sm border-collapse" data-testid="comparison-table">
+          <div className="relative overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+            <table className="w-full border-collapse text-sm" data-testid="comparison-table">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-slate-900">
-                  <th className="sticky left-0 z-10 w-48 border-r border-slate-200 bg-slate-50 px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
+                  {/* Corner: above other header cells and body sticky column */}
+                  <th
+                    scope="col"
+                    className="sticky top-14 left-0 z-30 w-48 border-b border-r border-slate-200 bg-slate-50 px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.06),0_4px_8px_-2px_rgba(15,23,42,0.06)]"
+                  >
                     Metric
                   </th>
                   {analyses.map(a => (
-                    <th key={a.id} className="min-w-[180px] px-5 py-4 text-center" data-testid={`col-${a.id}`}>
+                    <th
+                      key={a.id}
+                      scope="col"
+                      className="sticky top-14 z-20 min-w-[180px] border-b border-slate-200 bg-slate-50 px-5 py-4 text-center shadow-[0_4px_8px_-2px_rgba(15,23,42,0.06)]"
+                      data-testid={`col-${a.id}`}
+                    >
                       <div className="flex flex-col items-center gap-1.5">
                         <span className="text-sm font-semibold leading-tight text-slate-900">{a.name}</span>
                         <span className="text-xs font-normal text-slate-500">{fmtDate(a.savedAt)}</span>
@@ -221,7 +230,7 @@ export default function Comparison() {
                         <tr key={`group-${metric.group}`} className="bg-slate-100">
                           <td
                             colSpan={analyses.length + 1}
-                            className="px-5 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider sticky left-0 bg-slate-100"
+                            className="bg-slate-100 px-5 py-2 text-xs font-bold uppercase tracking-wider text-slate-500"
                           >
                             {metric.group}
                           </td>
@@ -230,11 +239,17 @@ export default function Comparison() {
                       <tr
                         key={metric.label}
                         className={cn(
-                          "border-t border-slate-100 hover:bg-slate-50 transition-colors",
+                          "group border-t border-slate-100 transition-colors hover:bg-slate-50",
                           i % 2 === 0 ? "bg-white" : "bg-slate-50/50"
                         )}
                       >
-                        <td className="px-5 py-3 text-slate-600 font-medium sticky left-0 bg-inherit z-10 whitespace-nowrap">
+                        <td
+                          className={cn(
+                            "sticky left-0 z-10 whitespace-nowrap border-r border-slate-100 px-5 py-3 font-medium text-slate-600",
+                            "shadow-[4px_0_8px_-2px_rgba(15,23,42,0.06)] group-hover:bg-slate-50",
+                            i % 2 === 0 ? "bg-white" : "bg-slate-50/50"
+                          )}
+                        >
                           {metric.label}
                         </td>
                         {analyses.map(a => {
