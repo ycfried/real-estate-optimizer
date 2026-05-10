@@ -125,36 +125,36 @@ export default function Comparison() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
-      <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3 sm:gap-4">
             <Link href="/" data-testid="link-back-to-calculator">
-              <div className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors cursor-pointer">
-                <ArrowLeft className="w-4 h-4" />
-                <span className="text-sm">Calculator</span>
+              <div className="flex items-center gap-2 rounded-md px-2 py-1.5 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer">
+                <ArrowLeft className="w-4 h-4 shrink-0" />
+                <span className="hidden text-sm font-medium sm:inline">Calculator</span>
               </div>
             </Link>
-            <div className="w-px h-4 bg-slate-700" />
+            <div className="hidden h-6 w-px bg-slate-200 sm:block" />
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center border border-primary/30">
-                <Building className="w-4 h-4 text-primary" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-blue-200 bg-blue-50">
+                <Building className="h-4 w-4 text-blue-600" />
               </div>
-              <h1 className="text-lg font-bold text-white tracking-tight">
-                MFRE<span className="text-primary-foreground/60 font-medium">Terminal</span>
+              <h1 className="text-lg font-bold tracking-tight text-slate-900">
+                MFRE<span className="font-medium text-slate-400">Terminal</span>
               </h1>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-mono text-slate-400 flex items-center gap-1.5">
-              <BarChart3 className="w-3.5 h-3.5" />
-              COMPARISON VIEW
-            </span>
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            <div className="hidden items-center gap-1.5 rounded-md px-2 py-2 text-xs font-medium text-slate-600 sm:flex sm:px-3">
+              <BarChart3 className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+              <span>Compare</span>
+            </div>
             {analyses.length > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={clearAll}
-                className="text-slate-400 hover:text-red-400 hover:bg-red-900/20 text-xs"
+                className="text-xs text-slate-600 hover:bg-red-50 hover:text-red-600"
                 data-testid="button-clear-all"
               >
                 Clear All
@@ -180,31 +180,31 @@ export default function Comparison() {
           <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
             <table className="w-full text-sm border-collapse" data-testid="comparison-table">
               <thead>
-                <tr className="bg-slate-900 text-white">
-                  <th className="px-5 py-4 text-left font-semibold text-slate-400 text-xs uppercase tracking-wider w-48 sticky left-0 bg-slate-900 z-10">
+                <tr className="border-b border-slate-200 bg-slate-50 text-slate-900">
+                  <th className="sticky left-0 z-10 w-48 border-r border-slate-200 bg-slate-50 px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
                     Metric
                   </th>
                   {analyses.map(a => (
-                    <th key={a.id} className="px-5 py-4 text-center min-w-[180px]" data-testid={`col-${a.id}`}>
+                    <th key={a.id} className="min-w-[180px] px-5 py-4 text-center" data-testid={`col-${a.id}`}>
                       <div className="flex flex-col items-center gap-1.5">
-                        <span className="font-semibold text-white text-sm leading-tight">{a.name}</span>
-                        <span className="text-slate-500 text-xs font-normal">{fmtDate(a.savedAt)}</span>
-                        <div className="flex items-center gap-3 mt-1">
+                        <span className="text-sm font-semibold leading-tight text-slate-900">{a.name}</span>
+                        <span className="text-xs font-normal text-slate-500">{fmtDate(a.savedAt)}</span>
+                        <div className="mt-1 flex items-center gap-3">
                           <button
                             onClick={() => exportFromSavedAnalysis(a)}
-                            className="text-slate-400 hover:text-blue-400 transition-colors"
+                            className="rounded p-1 text-slate-500 transition-colors hover:bg-white hover:text-blue-600"
                             title="Export PDF"
                             data-testid={`button-export-pdf-${a.id}`}
                           >
-                            <FileDown className="w-3.5 h-3.5" />
+                            <FileDown className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => deleteAnalysis(a.id)}
-                            className="text-slate-600 hover:text-red-400 transition-colors"
+                            className="rounded p-1 text-slate-500 transition-colors hover:bg-white hover:text-red-600"
                             title="Remove from comparison"
                             data-testid={`button-delete-${a.id}`}
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </div>
