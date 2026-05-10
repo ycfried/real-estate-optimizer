@@ -1,5 +1,5 @@
 {
-"outputDirectory": "artifacts/mfre-tool/dist/public",
+"outputDirectory": "dist/public",
 "rewrites": [
 { "source": "/(.*)", "destination": "/index.html" }
 ]
