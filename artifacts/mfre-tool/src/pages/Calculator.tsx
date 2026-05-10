@@ -474,13 +474,13 @@ export default function Calculator() {
                     <div key={expense.name} className="flex items-center justify-between gap-3 py-1.5 border-b border-slate-100 last:border-0">
                       <span className="min-w-0 flex-1 text-sm text-slate-600">{expense.label}</span>
                       <div className="flex flex-shrink-0 items-center gap-2">
-                        <div className="w-36">
+                        <div className="w-36 shrink-0">
                           <Controller name={expense.name as any} control={control} render={({ field: f }) => (
                             <CurrencyField value={f.value} onChange={v => f.onChange(v)} step={50}
                               testId={`input-expense-${expense.name}`} />
                           )} />
                         </div>
-                        <span className="w-8 flex-shrink-0" aria-hidden="true" />
+                        <span className="h-10 w-8 shrink-0" aria-hidden="true" />
                       </div>
                     </div>
                   ))}
@@ -494,17 +494,19 @@ export default function Calculator() {
                         )} />
                       </div>
                       <div className="flex flex-shrink-0 items-center gap-2">
-                        <div className="w-36">
+                        <div className="w-36 shrink-0">
                           <Controller name={`additionalExpenses.${index}.amount`} control={control} render={({ field: f }) => (
                             <CurrencyField value={f.value} onChange={v => f.onChange(v)} step={50}
                               testId={`input-extra-expense-${index}`} />
                           )} />
                         </div>
-                        <button type="button" onClick={() => removeExpense(index)}
-                          className="opacity-0 group-hover:opacity-100 p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
-                          title="Remove" data-testid={`button-remove-expense-${index}`}>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex h-10 w-8 shrink-0 items-center justify-center">
+                          <button type="button" onClick={() => removeExpense(index)}
+                            className="opacity-0 group-hover:opacity-100 shrink-0 rounded p-1 text-slate-400 transition-all hover:bg-red-50 hover:text-red-500"
+                            title="Remove" data-testid={`button-remove-expense-${index}`}>
+                            <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
