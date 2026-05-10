@@ -125,7 +125,6 @@ export default function Comparison() {
 
   return (
     <div className="flex min-h-svh flex-col bg-slate-50 font-sans">
-      {/* shrink-0: page chrome; table scroll lives in main so thead sticky aligns to scrollport, not a broken overflow-x wrapper */}
       <header className="sticky top-0 z-50 shrink-0 border-b border-slate-200 bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3 sm:gap-4">
@@ -165,7 +164,7 @@ export default function Comparison() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-7xl min-h-0 flex-1 flex-col px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col overflow-x-hidden overflow-y-auto px-4 py-8 sm:px-6 lg:px-8">
         {analyses.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center py-32 text-center">
             <BarChart3 className="w-12 h-12 text-slate-300 mb-4" />
@@ -178,8 +177,8 @@ export default function Comparison() {
             </Link>
           </div>
         ) : (
-          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="min-h-0 flex-1 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+          <div className="relative min-w-0 w-full rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-x-auto [-webkit-overflow-scrolling:touch] [overscroll-behavior-x:contain]">
             <table className="w-full border-separate border-spacing-0 text-sm" data-testid="comparison-table">
               <thead>
                 <tr className="bg-slate-50 text-slate-900">

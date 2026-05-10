@@ -196,25 +196,26 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
 
   // Grade badges — two pill boxes side-by-side
   const bw = (CW - 6) / 2;
+  const pillH = 14;
   const drawGradePill = (label: string, grade: string, x: number) => {
     const bg = gradeBgColor(grade);
     const fg = gradeColor(grade);
     doc.setFillColor(...bg);
-    doc.roundedRect(x, y, bw, 12, 2, 2, "F");
+    doc.roundedRect(x, y, bw, pillH, 2, 2, "F");
     doc.setDrawColor(...fg);
     doc.setLineWidth(0.4);
-    doc.roundedRect(x, y, bw, 12, 2, 2, "S");
+    doc.roundedRect(x, y, bw, pillH, 2, 2, "S");
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(6.5);
+    doc.setFontSize(8);
     doc.setTextColor(...C.text);
-    doc.text(label, x + bw / 2, y + 4, { align: "center" });
+    doc.text(label, x + bw / 2, y + 4.75, { align: "center" });
     doc.setFontSize(11);
     doc.setTextColor(...fg);
-    doc.text(grade.toUpperCase(), x + bw / 2, y + 10, { align: "center" });
+    doc.text(grade.toUpperCase(), x + bw / 2, y + 11.25, { align: "center" });
   };
-  drawGradePill("Investment Grade", results.investmentGrade, ML);
-  drawGradePill("Stress Grade", results.stressGrade, ML + bw + 6);
-  y += 18;
+  drawGradePill("INVESTMENT GRADE", results.investmentGrade, ML);
+  drawGradePill("STRESS GRADE", results.stressGrade, ML + bw + 6);
+  y += pillH + 6;
 
   // ── Section header helper ─────────────────────────────────────────────────────
   const sectionHeader = (label: string) => {
@@ -358,11 +359,13 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
 
   metricRow("Stressed NOI", fmt$(results.stressedNoi));
   metricRow("Stressed Cash Flow", fmt$(results.stressedCashFlow), cashFlowColor(results.stressedCashFlow), true, C.bgLight);
-  halfRow(
-    "Stressed DSCR", fmtNum(results.stressedDscr),
+  metricRow(
+    "Stressed DSCR",
+    fmtNum(results.stressedDscr),
     dscrColor(results.stressedDscr, data.minStressDscr, data.excellentStressDscr),
-    "Stressed Cap Rate", fmtPct(results.stressedCapRate), C.textMid
+    true
   );
+  metricRow("Stressed Cap Rate", fmtPct(results.stressedCapRate), C.textMid);
   y += 2;
 
   drawPageFooter(doc, PW, PH, ML, MR, 1, 3);
@@ -463,19 +466,22 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     y += 6.5;
   });
 
-  // Total row
+  y += 7;
+  // Total row — stronger typography and spacing from last expense divider
+  const totalRowH = 12;
   doc.setFillColor(...C.bgMid);
-  doc.rect(ML, y - 1, CW, 7, "F");
+  doc.rect(ML, y - 2, CW, totalRowH, "F");
+  doc.setDrawColor(...C.borderLight);
+  doc.setLineWidth(0.2);
+  doc.line(ML, y - 2, ML + CW, y - 2);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
+  doc.setFontSize(10);
   doc.setTextColor(...C.text);
-  doc.text("Total Monthly", ML + 4, y + 3.5);
-  doc.text(fmt$(monthlyTotal), ML + CW - 4, y + 3.5, { align: "right" });
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.5);
-  doc.setTextColor(...C.muted);
-  doc.text(`(${fmt$(monthlyTotal * 12)} annually)`, ML + CW - 4, y + 8.5, { align: "right" });
-  y += 16;
+  doc.text("Total Monthly", ML + 4, y + 4);
+  doc.text(fmt$(monthlyTotal), ML + CW - 4, y + 4, { align: "right" });
+  doc.setFontSize(9);
+  doc.text(`(${fmt$(monthlyTotal * 12)} annually)`, ML + CW - 4, y + 9, { align: "right" });
+  y += totalRowH + 5;
 
   y += 4;
   drawPageFooter(doc, PW, PH, ML, MR, 2, 3);
