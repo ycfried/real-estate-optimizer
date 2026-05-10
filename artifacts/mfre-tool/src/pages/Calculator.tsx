@@ -471,24 +471,29 @@ export default function Calculator() {
                     { name: "capex", label: "CapEx Reserve" },
                     { name: "otherExpenses", label: "Other" },
                   ] as const).map((expense) => (
-                    <div key={expense.name} className="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0">
-                      <span className="text-sm text-slate-600">{expense.label}</span>
-                      <div className="w-36">
-                        <Controller name={expense.name as any} control={control} render={({ field: f }) => (
-                          <CurrencyField value={f.value} onChange={v => f.onChange(v)} step={50}
-                            testId={`input-expense-${expense.name}`} />
-                        )} />
+                    <div key={expense.name} className="flex items-center justify-between gap-3 py-1.5 border-b border-slate-100 last:border-0">
+                      <span className="min-w-0 flex-1 text-sm text-slate-600">{expense.label}</span>
+                      <div className="flex flex-shrink-0 items-center gap-2">
+                        <div className="w-36">
+                          <Controller name={expense.name as any} control={control} render={({ field: f }) => (
+                            <CurrencyField value={f.value} onChange={v => f.onChange(v)} step={50}
+                              testId={`input-expense-${expense.name}`} />
+                          )} />
+                        </div>
+                        <span className="w-8 flex-shrink-0" aria-hidden="true" />
                       </div>
                     </div>
                   ))}
 
                   {/* Custom additional expenses */}
                   {extraExpenseFields.map((field, index) => (
-                    <div key={field.id} className="flex items-center justify-between py-1.5 border-b border-slate-100 group">
-                      <Controller name={`additionalExpenses.${index}.name`} control={control} render={({ field: f }) => (
-                        <InlineLabel value={f.value || "Custom Expense"} onChange={v => f.onChange(v)} />
-                      )} />
-                      <div className="flex items-center gap-2">
+                    <div key={field.id} className="flex items-center justify-between gap-3 py-1.5 border-b border-slate-100 group">
+                      <div className="min-w-0 flex-1">
+                        <Controller name={`additionalExpenses.${index}.name`} control={control} render={({ field: f }) => (
+                          <InlineLabel value={f.value || "Custom Expense"} onChange={v => f.onChange(v)} />
+                        )} />
+                      </div>
+                      <div className="flex flex-shrink-0 items-center gap-2">
                         <div className="w-36">
                           <Controller name={`additionalExpenses.${index}.amount`} control={control} render={({ field: f }) => (
                             <CurrencyField value={f.value} onChange={v => f.onChange(v)} step={50}
