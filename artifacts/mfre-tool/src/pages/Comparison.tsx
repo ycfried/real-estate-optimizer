@@ -124,8 +124,9 @@ export default function Comparison() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white shadow-sm">
+    <div className="flex min-h-svh flex-col bg-slate-50 font-sans">
+      {/* shrink-0: page chrome; table scroll lives in main so thead sticky aligns to scrollport, not a broken overflow-x wrapper */}
+      <header className="sticky top-0 z-50 shrink-0 border-b border-slate-200 bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3 sm:gap-4">
             <Link href="/" data-testid="link-back-to-calculator">
@@ -164,9 +165,9 @@ export default function Comparison() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="mx-auto flex w-full max-w-7xl min-h-0 flex-1 flex-col px-4 py-8 sm:px-6 lg:px-8">
         {analyses.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-32 text-center">
+          <div className="flex flex-1 flex-col items-center justify-center py-32 text-center">
             <BarChart3 className="w-12 h-12 text-slate-300 mb-4" />
             <h2 className="text-xl font-semibold text-slate-700 mb-2">No saved analyses yet</h2>
             <p className="text-slate-500 text-sm mb-6 max-w-sm">
@@ -177,14 +178,15 @@ export default function Comparison() {
             </Link>
           </div>
         ) : (
-          <div className="relative overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full border-collapse text-sm" data-testid="comparison-table">
+          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="min-h-0 flex-1 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+            <table className="w-full border-separate border-spacing-0 text-sm" data-testid="comparison-table">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-slate-900">
+                <tr className="bg-slate-50 text-slate-900">
                   {/* Corner: above other header cells and body sticky column */}
                   <th
                     scope="col"
-                    className="sticky top-14 left-0 z-30 w-48 border-b border-r border-slate-200 bg-slate-50 px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.06),0_4px_8px_-2px_rgba(15,23,42,0.06)]"
+                    className="sticky top-0 left-0 z-30 w-48 border-b border-r border-slate-200 bg-slate-50 px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 shadow-[4px_0_8px_-2px_rgba(15,23,42,0.06)]"
                   >
                     Metric
                   </th>
@@ -192,7 +194,7 @@ export default function Comparison() {
                     <th
                       key={a.id}
                       scope="col"
-                      className="sticky top-14 z-20 min-w-[180px] border-b border-slate-200 bg-slate-50 px-5 py-4 text-center shadow-[0_4px_8px_-2px_rgba(15,23,42,0.06)]"
+                      className="sticky top-0 z-20 min-w-[180px] border-b border-slate-200 bg-slate-50 px-5 py-4 text-center"
                       data-testid={`col-${a.id}`}
                     >
                       <div className="flex flex-col items-center gap-1.5">
@@ -230,7 +232,7 @@ export default function Comparison() {
                         <tr key={`group-${metric.group}`} className="bg-slate-100">
                           <td
                             colSpan={analyses.length + 1}
-                            className="bg-slate-100 px-5 py-2 text-xs font-bold uppercase tracking-wider text-slate-500"
+                            className="border-b border-slate-200 bg-slate-100 px-5 py-2 text-xs font-bold uppercase tracking-wider text-slate-500"
                           >
                             {metric.group}
                           </td>
@@ -239,13 +241,13 @@ export default function Comparison() {
                       <tr
                         key={metric.label}
                         className={cn(
-                          "group border-t border-slate-100 transition-colors hover:bg-slate-50",
+                          "group transition-colors hover:bg-slate-50 [&>td]:border-b [&>td]:border-slate-100",
                           i % 2 === 0 ? "bg-white" : "bg-slate-50/50"
                         )}
                       >
                         <td
                           className={cn(
-                            "sticky left-0 z-10 whitespace-nowrap border-r border-slate-100 px-5 py-3 font-medium text-slate-600",
+                            "sticky left-0 z-10 whitespace-nowrap border-r border-slate-200 px-5 py-3 font-medium text-slate-600",
                             "shadow-[4px_0_8px_-2px_rgba(15,23,42,0.06)] group-hover:bg-slate-50",
                             i % 2 === 0 ? "bg-white" : "bg-slate-50/50"
                           )}
@@ -273,6 +275,7 @@ export default function Comparison() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </main>
