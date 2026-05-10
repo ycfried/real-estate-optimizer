@@ -185,7 +185,7 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
   const dateStr = savedAt ? fmtDate(savedAt) : fmtDate(Date.now());
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
-  doc.setTextColor(...C.mutedLight);
+  doc.setTextColor(...C.text);
   doc.text(`Generated ${dateStr}`, PW - MR, y, { align: "right" });
   y += 5;
 
@@ -204,17 +204,16 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     doc.setDrawColor(...fg);
     doc.setLineWidth(0.4);
     doc.roundedRect(x, y, bw, 12, 2, 2, "S");
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(6.5);
-    doc.setTextColor(...C.muted);
-    doc.text(label, x + bw / 2, y + 4, { align: "center" });
     doc.setFont("helvetica", "bold");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...C.text);
+    doc.text(label, x + bw / 2, y + 4, { align: "center" });
     doc.setFontSize(11);
     doc.setTextColor(...fg);
     doc.text(grade.toUpperCase(), x + bw / 2, y + 10, { align: "center" });
   };
-  drawGradePill("INVESTMENT GRADE", results.investmentGrade, ML);
-  drawGradePill("STRESS GRADE", results.stressGrade, ML + bw + 6);
+  drawGradePill("Investment Grade", results.investmentGrade, ML);
+  drawGradePill("Stress Grade", results.stressGrade, ML + bw + 6);
   y += 18;
 
   // ── Section header helper ─────────────────────────────────────────────────────
@@ -317,11 +316,13 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     true,
     C.bgLight
   );
-  halfRow(
-    "Cash-on-Cash Return", fmtPct(results.coc),
+  metricRow(
+    "Cash-on-Cash Return",
+    fmtPct(results.coc),
     cocColor(results.coc, data.minCoc, data.excellentCoc),
-    "Cap Rate", fmtPct(results.capRate), C.textMid
+    true
   );
+  metricRow("Cap Rate", fmtPct(results.capRate), C.textMid);
   metricRow(
     "Debt Service Coverage Ratio (DSCR)",
     fmtNum(results.dscr),
@@ -331,32 +332,29 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
   y += 3;
 
   // ── SECTION 4: Stressed Scenario ─────────────────────────────────────────────
-  // Taller header: title on line 1, params on line 2
-  const stressHeaderH = 16;
+  const stressHeaderH = 8;
   doc.setFillColor(...C.amberLight);
   doc.rect(ML, y, CW, stressHeaderH, "F");
   doc.setDrawColor(...C.amberBorder);
   doc.setLineWidth(0.25);
   doc.line(ML, y, ML + CW, y);
   doc.line(ML, y + stressHeaderH, ML + CW, y + stressHeaderH);
-  // Title
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7.5);
-  doc.setTextColor(...C.amber);
-  doc.text("STRESSED SCENARIO", ML + 4, y + 6);
-  // Params centered on second line
   const stressParams = [
     `+${data.extraVacancyPercent}% vacancy`,
     `-${data.rentReductionPercent}% rent`,
     `+${data.insuranceIncreasePercent}% insurance`,
     `+${data.taxIncreasePercent}% taxes`,
     `+${data.maintenanceIncreasePercent}% maintenance`,
-  ].join("   /   ");
+  ].join(" / ");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...C.amber);
+  doc.text("STRESSED SCENARIO", ML + 4, y + 5.3);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(6.5);
-  doc.setTextColor(...C.muted);
-  doc.text(stressParams, ML + CW / 2, y + 12.5, { align: "center" });
-  y += stressHeaderH + 7; // header height + breathing room
+  doc.setFontSize(7);
+  doc.setTextColor(...C.text);
+  doc.text(stressParams, PW - MR - 4, y + 5.3, { align: "right" });
+  y += stressHeaderH + 7;
 
   metricRow("Stressed NOI", fmt$(results.stressedNoi));
   metricRow("Stressed Cash Flow", fmt$(results.stressedCashFlow), cashFlowColor(results.stressedCashFlow), true, C.bgLight);
@@ -479,79 +477,7 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
   doc.text(`(${fmt$(monthlyTotal * 12)} annually)`, ML + CW - 4, y + 8.5, { align: "right" });
   y += 16;
 
-  // ── Grading Thresholds ────────────────────────────────────────────────────────
-  sectionHeader("Grading Thresholds");
-
-  // Use ASCII-only text — jsPDF's built-in Helvetica can't render >= or em-dash Unicode
-  const thresholdRows: [string, string, string, string][] = [
-    ["Cash-on-Cash Return",
-      `>= ${data.excellentCoc}%`,
-      `${data.minCoc}% to ${data.excellentCoc}%`,
-      `< ${data.minCoc}%`],
-    ["Debt Service Coverage Ratio",
-      `>= ${data.excellentDscr}`,
-      `${data.minDscr} to ${data.excellentDscr}`,
-      `< ${data.minDscr}`],
-    ["Stressed DSCR",
-      `>= ${data.excellentStressDscr}`,
-      `${data.minStressDscr} to ${data.excellentStressDscr}`,
-      `< ${data.minStressDscr}`],
-  ];
-
-  // Column x positions
-  const colMetric  = ML + 4;
-  const colExc     = ML + CW * 0.42;
-  const colGood    = ML + CW * 0.62;
-  const colPoor    = ML + CW - 4;
-
-  // Table header
-  doc.setFillColor(...C.bgMid);
-  doc.rect(ML, y - 1, CW, 7, "F");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7);
-  doc.setTextColor(...C.muted);
-  doc.text("METRIC", colMetric, y + 3.5);
-  doc.text("EXCELLENT", colExc, y + 3.5);
-  doc.text("GOOD (RANGE)", colGood, y + 3.5);
-  doc.text("POOR", colPoor, y + 3.5, { align: "right" });
-  y += 8;
-
-  thresholdRows.forEach(([metric, excellent, good, poor], i) => {
-    const rowBg = i % 2 === 0 ? C.white : C.bgLight;
-    doc.setFillColor(...rowBg);
-    doc.rect(ML, y - 1, CW, 7, "F");
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(...C.textMid);
-    doc.text(metric, colMetric, y + 3.5);
-
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...C.green);
-    doc.text(excellent, colExc, y + 3.5);
-
-    doc.setTextColor(...C.yellow);
-    doc.text(good, colGood, y + 3.5);
-
-    doc.setTextColor(...C.red);
-    doc.text(poor, colPoor, y + 3.5, { align: "right" });
-
-    doc.setDrawColor(...C.borderLight);
-    doc.setLineWidth(0.2);
-    doc.line(ML, y + 6, ML + CW, y + 6);
-    y += 7;
-  });
-
   y += 4;
-  // Explanation note
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7);
-  doc.setTextColor(...C.mutedLight);
-  doc.text(
-    "Investment grade is determined by Cash-on-Cash Return and DSCR together. Stress grade is determined by Stressed DSCR alone.",
-    ML, y, { maxWidth: CW }
-  );
-
   drawPageFooter(doc, PW, PH, ML, MR, 2, 3);
 
   // ── PAGE 3: Amortization Summary ─────────────────────────────────────────────
