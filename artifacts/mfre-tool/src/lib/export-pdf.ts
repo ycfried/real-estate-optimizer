@@ -610,21 +610,6 @@ export function exportAnalysisPdf(name: string, data: InvestmentData, results: S
     doc.text(isLast ? "$0" : fmt$(balance), aCol.balance, y + 4);
  
     // % paid — bar ends before reserved label zone so text never overlaps
-    const pctColRight = aCol.pct;
-    const reservedForPctLabel = 21;
-    const barEndX = pctColRight - reservedForPctLabel;
-    const preferredBarSpan = 20;
-    const minBarStart = aCol.balance + 8;
-    const usable = Math.max(0, barEndX - minBarStart);
-    const barSpan = usable < 4 ? 0 : Math.min(preferredBarSpan, usable);
-    const barX = barSpan > 0 ? barEndX - barSpan : barEndX;
-    const barFilledW = barSpan > 0 ? (equityPct / 100) * barSpan : 0;
-    if (barSpan > 0) {
-      doc.setFillColor(...C.bgMid);
-      doc.rect(barX, y + 1.5, barSpan, 3, "F");
-      doc.setFillColor(...C.blue);
-      doc.rect(barX, y + 1.5, barFilledW, 3, "F");
-    }
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7.5);
     doc.setTextColor(...C.blueMid);
