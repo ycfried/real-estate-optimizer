@@ -8,6 +8,7 @@ storageBucket: "mfreit-1.firebasestorage.app",
 messagingSenderId: "1000855155493",
 appId: "1:1000855155493:web:69e85b6921ae0dadee60cc"
 };
+
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
