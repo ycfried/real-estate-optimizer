@@ -50,8 +50,9 @@ return () => unsubscribe();
 const saveAnalysis = useCallback(async (name: string, data: InvestmentData, results: SavedAnalysisResults) => {
 const col = getUserCollection();
 if (!col) return null;
+const id = Date.now() + "-" + Math.random().toString(36).slice(2, 7);
 const newEntry: SavedAnalysis = {
-id: ${Date.now()}-${Math.random().toString(36).slice(2, 7)},
+id: id,
 name: name.trim() || "Untitled Property",
 savedAt: Date.now(),
 data,
